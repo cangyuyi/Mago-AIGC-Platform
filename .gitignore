@@ -1,0 +1,25 @@
+# 敏感配置文件（绝对不要提交）
+.env
+.env.local
+config.js
+config.json
+secrets/
+*.key
+*.pem
+api_keys.txt
+passwords.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 大文件/未公开素材
+raw-assets/
+internal-docs/
+*.psd
+*.fig
+screenshots/raw/
+
+# 日志文件
+*.log
+logs/
