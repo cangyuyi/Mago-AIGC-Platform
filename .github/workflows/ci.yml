@@ -90,7 +90,7 @@ jobs:
           node ../../scripts/e2e_ui.mjs --demo --base http://127.0.0.1:3000 --shots /tmp/mago-e2e
       - name: Upload browser evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mago-browser-e2e
           path: |
@@ -226,7 +226,7 @@ jobs:
           node scripts/e2e_ui.mjs --live --base http://127.0.0.1:3000 --shots /tmp/mago-live-e2e
       - name: Upload full-stack browser evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mago-fullstack-e2e
           path: |
@@ -293,7 +293,7 @@ jobs:
         run: python3 scripts/e2e_api.py --base http://127.0.0.1:8080
       - name: Upload API E2E server log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mago-api-e2e
           path: /tmp/mago-api-e2e.log
@@ -323,7 +323,7 @@ jobs:
           fi
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: go-coverage
           path: services/api-gateway/coverage.out
