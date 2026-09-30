@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.common.logger import get_logger
+from src.common.streaming import emit_chunk, emit_thinking
 from src.config import Settings, get_settings
 from src.llm.gateway import LLMGateway, get_llm_gateway
 
@@ -90,3 +91,37 @@ class BaseAgent:
             temperature=temperature,
         ):
             yield chunk
+
+    async def call_llm_streaming(
+        self,
+        user_message: str,
+        system_prompt: str | None = None,
+        model: str | None = None,
+        temperature: float = 0.7,
+        history: list[dict[str, str]] | None = None,
+    ) -> str:
+        """Stream an LLM answer while forwarding each token to the SSE client.
+
+        The returned string is the full concatenated answer, so callers can keep
+        parsing structured output exactly as they do with ``call_llm``. Without a
+        configured provider this falls back to a single non-streamed call, which
+        keeps offline/demo runs working.
+        """
+        if not self.llm_available:
+            return ""
+
+        accumulated: list[str] = []
+        async for chunk in self.stream_llm(
+            user_message=user_message,
+            system_prompt=system_prompt,
+            model=model,
+            temperature=temperature,
+            history=history,
+        ):
+            accumulated.append(chunk)
+            emit_chunk(self.name, chunk)
+        return "".join(accumulated)
+
+    def emit_progress(self, text: str) -> None:
+        """Publish a human-readable progress line to the SSE stream."""
+        emit_thinking(self.name, text)

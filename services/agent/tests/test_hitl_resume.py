@@ -295,10 +295,16 @@ async def _collect_sse(response) -> list[tuple[str, dict]]:
 
 
 class _FakeRouteGraph:
-    """A graph double that records how the route invoked it."""
+    """A graph double that records how the route invoked it.
 
-    def __init__(self, *, interrupts: list | None = None) -> None:
+    The route now drives the graph with ``astream(stream_mode=[...])`` rather
+    than ``ainvoke``, so the double yields ``(mode, payload)`` pairs the same way
+    LangGraph does.
+    """
+
+    def __init__(self, *, interrupts: list | None = None, chunks: list[str] | None = None) -> None:
         self._interrupts = interrupts
+        self._chunks = chunks or []
         self.invocations: list[object] = []
 
     def get_state(self, _config):
@@ -306,16 +312,18 @@ class _FakeRouteGraph:
 
         return SimpleNamespace(next=("idea_gate",))
 
-    async def ainvoke(self, payload, config=None):
+    async def astream(self, payload, config=None, stream_mode=None):
         self.invocations.append(payload)
-        result: dict = {
+        for chunk in self._chunks:
+            yield "custom", {"type": "chunk", "node": "storyteller", "text": chunk}
+        delta: dict = {
             "steps_completed": ["ideation"],
             "current_step": "awaiting_idea",
             "creative_ideas": [{"id": "idea001", "title": "t", "description": "d"}],
         }
         if self._interrupts:
-            result["__interrupt__"] = self._interrupts
-        return result
+            yield "updates", {"__interrupt__": self._interrupts}
+        yield "updates", {"ideation": delta}
 
 
 @pytest.mark.asyncio

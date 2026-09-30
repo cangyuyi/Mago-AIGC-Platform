@@ -1,5 +1,23 @@
 # 🧙 Mago Agent Platform — 项目交接文档
 
+## 🔄 2026-09-30 更新：真·token 级流式输出 + 前端门控测试
+
+### 本轮完成
+- **SSE 由“假流式”改为“真流式”**：`run_agent` 过去用 `ainvoke` 把整张图跑完才逐条吐事件，用户要等数十秒才看到任何输出。现改为 `graph.astream(stream_mode=["updates","custom"])`，每个节点产出的瞬间就推送到前端。
+  - `updates` 流：节点级增量，逐个映射为 `ideas/brief/script/storyboard/...` 事件，并新增通用 `node` 事件，前端可据此显示“正在执行哪个节点”。
+  - `custom` 流：新增 `src/common/streaming.py`，节点通过 `get_stream_writer()` 推送 token 级 `chunk`。`StorytellerAgent` 现在用 `call_llm_streaming()` 边生成边推送，脚本正文逐字出现。
+  - 新增 `_astream_graph()` 统一兼容 LangGraph 不同版本 `(mode, payload)` 与裸 payload 两种 yield 形态；`_custom_to_sse()` 转发自定义事件且对未知类型向前兼容。
+  - 流式是“尽力而为”的传输层能力：`streaming.py` 在无 LangGraph 运行上下文时静默降级，绝不因流式失败而中断业务节点。
+- **新增后端流式测试** `tests/test_agent_streaming.py`（7 个用例）：token chunk 送达、chunk 与节点输出顺序、节点 delta 映射为 script 事件、中断经 updates 流上报、resume 走 `Command`、`_custom_to_sse` 空串/未知类型处理、`_astream_graph` 两种 yield 形态归一化。
+- **新增前端门控测试** `apps/web/src/components/chat/__tests__/chat-interface-gate.test.tsx`（4 个用例）：门控横幅渲染、approval 续跑 payload 正确、token chunk 累积渲染进气泡、续跑后横幅消失。`vitest.setup.ts` 补 `scrollIntoView` polyfill（jsdom 缺失导致组件测试报错）。
+- 既有 `test_hitl_resume.py` / `test_agent_regressions.py` 的路由图替身由 `ainvoke` 改为 `astream`，与新实现对齐。
+- 真实图端到端冒烟：ideation 模式事件顺序 `meta→thinking→node→ideas→done` 增量到达；detailed 模式连续三轮续跑 `idea_selection→brief_review→script_review`，状态正确累积。
+
+### 验证结果
+- Agent：`pytest` **97 passed**、`ruff check` 通过、`mypy` 对 89 个源文件无错误。
+- Web：`typecheck` 通过、`eslint` 通过、`vitest` **66 passed**。
+
+
 ## 🔄 2026-09-17 更新：发布前收尾复核
 
 ### 本轮完成

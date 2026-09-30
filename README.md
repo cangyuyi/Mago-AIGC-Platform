@@ -235,6 +235,15 @@ START → 路由意图
 
 支持断点续跑：关闭浏览器重新打开可以继续之前的任务。
 
+### 真·流式输出
+
+Agent 接口使用 `graph.astream(stream_mode=["updates","custom"])` 驱动工作流，不是等整张图跑完再一次性返回：
+
+- **节点级增量**：每个节点产出的瞬间即通过 SSE 推送对应事件（`node` / `ideas` / `brief` / `script` / `storyboard` / `prompt` …），前端可实时显示进展。
+- **Token 级流式**：节点通过 `get_stream_writer()` 推送 `chunk`，脚本等长文本边生成边显示，无需等待完整 JSON。
+- **对客户端友好**：`meta→thinking→…→done` 事件协议不变，新增的 `node`/`chunk` 事件向后兼容，老客户端忽略即可。
+- **续跑语义安全**：整个流程仍由 `interrupt()` + `Command(resume=...)` 驱动，流式与人工确认门可以同时工作；断点存储在可插拔 checkpointer 中（Postgres/Redis → SQLite → 进程内 MemorySaver，按配置降级）。
+
 ---
 
 ## 🔍 可观测性

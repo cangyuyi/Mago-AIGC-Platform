@@ -7,6 +7,7 @@ from typing import Any, cast
 from uuid import uuid4
 
 from src.agents.base import BaseAgent
+from src.common.streaming import emit_thinking
 
 STORYTELLER_SYSTEM_PROMPT = """你是一位顶级短视频编剧，擅长写抖音/快手/小红书爆款短视频脚本。
 
@@ -64,6 +65,7 @@ class StorytellerAgent(BaseAgent):
         user_modifications = state.get("user_modifications", "")
 
         self.logger.info("storyteller_start", title=brief.get("angle_title", ""))
+        emit_thinking(self.name, "正在撰写完整脚本…")
 
         prompt = f"""创意简报:
 标题: {brief.get("angle_title", "")}
@@ -83,11 +85,9 @@ class StorytellerAgent(BaseAgent):
         if not self.llm_available:
             script = self._offline_script(brief, selected_hook)
         else:
-            response_text = await self.call_llm(
-                user_message=prompt,
-                temperature=0.75,
-                response_format={"type": "json_object"},
-            )
+            # Stream the script as it is written so the UI shows progress instead
+            # of freezing until the whole JSON object is finished.
+            response_text = await self.call_llm_streaming(user_message=prompt, temperature=0.75)
             script = self._parse_script(response_text)
 
         script["id"] = str(uuid4())[:8]

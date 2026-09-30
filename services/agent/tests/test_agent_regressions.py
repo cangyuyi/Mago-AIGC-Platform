@@ -104,10 +104,10 @@ async def test_agent_run_propagates_authenticated_user_id(monkeypatch) -> None:
     captured: dict = {}
 
     class FakeGraph:
-        async def ainvoke(self, state, config=None):
+        async def astream(self, state, config=None, stream_mode=None):
             captured["state"] = state
             captured["config"] = config
-            return {"steps_completed": [], "current_step": "done"}
+            yield "updates", {"echo": {"steps_completed": [], "current_step": "done"}}
 
     monkeypatch.setattr(agent_route, "get_llm_gateway", lambda: object())
     monkeypatch.setattr(agent_route, "build_echo_graph", lambda agent: FakeGraph())
@@ -132,9 +132,9 @@ async def test_agent_threads_are_scoped_to_authenticated_user(monkeypatch) -> No
     captured: dict = {}
 
     class FakeGraph:
-        async def ainvoke(self, state, config=None):
+        async def astream(self, state, config=None, stream_mode=None):
             captured["config"] = config
-            return {"steps_completed": [], "current_step": "done"}
+            yield "updates", {"echo": {"steps_completed": [], "current_step": "done"}}
 
     monkeypatch.setattr(agent_route, "get_llm_gateway", lambda: object())
     monkeypatch.setattr(agent_route, "build_echo_graph", lambda agent: FakeGraph())

@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import AsyncIterator
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -278,8 +279,13 @@ async def create_prompt_pack(req: PromptPackRequest, request: Request) -> dict[s
 async def run_agent(req: ChatRequest, request: Request):
     """SSE streaming endpoint for all agent interactions.
 
-    Events: meta, thinking, chunk, ideas, brief, characters, style, hooks, script,
+    Events: meta, thinking, node, idea, brief, characters, style, hooks, script,
             eval, compliance, rhythm, storyboard, prompt, export, done, error
+
+    The graph is driven with ``astream(stream_mode=["updates","custom"])`` so
+    every node's output is pushed to the client the moment it finishes instead
+    of being buffered until the whole run completes. ``custom`` mode carries the
+    token-level chunks emitted by agents through ``get_stream_writer()``.
     """
     run_id = str(uuid4())
     await _validate_project_access(request, req.project_id)
@@ -325,12 +331,8 @@ async def run_agent(req: ChatRequest, request: Request):
         yield _sse("meta", {"run_id": run_id, "mode": req.mode, "timestamp": time.time(), **provenance})
 
         try:
-            # Build initial state
             initial_state: dict[str, Any] = {
                 "project_id": req.project_id or "",
-                # The auth middleware attaches the verified subject to request.state
-                # in production. Keep anonymous mode for local/demo runs where
-                # Agent JWT authentication is intentionally disabled.
                 "user_id": str(getattr(request.state, "user_id", None) or "anonymous"),
                 "run_id": run_id,
                 "mode": req.mode,
@@ -375,7 +377,7 @@ async def run_agent(req: ChatRequest, request: Request):
                     initial_state["script_approved"] = True
                     initial_state["storyboard_approved"] = True
                 yield _sse("thinking", {"node": "resume", "text": "正在继续上一次创作流程..."})
-                result = await graph.ainvoke(Command(resume=resume_value), config=config)
+                graph_input: Any = Command(resume=resume_value)
             else:
                 # Fresh run: honour explicit approvals/selection sent up front.
                 if req.approved:
@@ -387,99 +389,45 @@ async def run_agent(req: ChatRequest, request: Request):
                 if req.feedback:
                     initial_state["user_modifications"] = req.feedback
 
-                # --- Stream intermediate thinking steps ---
                 yield _sse("thinking", {"node": "start", "text": "正在启动创意工作流..."})
+                graph_input = initial_state
 
-                # Run the graph
-                result = await graph.ainvoke(initial_state, config=config)
+            # --- Drive the graph and forward each node's output as it lands ---
+            emitted: set[str] = set()
+            final_state: dict[str, Any] = {}
+            pending_gate: dict[str, Any] | None = None
+            step_count = 0
 
-            # --- Stream out all outputs ---
-            # Trend results
-            trend_summary = result.get("trend_summary")
-            if trend_summary:
-                yield _sse("thinking", {"node": "trend", "text": "热点研究完成"})
-                topics = result.get("topic_recommendations", [])
-                if topics:
-                    yield _sse("topics", {"topics": topics})
+            async for stream_mode, payload in _astream_graph(graph, graph_input, config):
+                if stream_mode == "custom":
+                    # Token-level chunks forwarded by agents via the stream writer.
+                    if isinstance(payload, dict):
+                        for event in _custom_to_sse(payload):
+                            yield event
+                    continue
 
-            # Ideas
-            ideas = result.get("creative_ideas", [])
-            if ideas:
-                yield _sse("thinking", {"node": "ideation", "text": f"创意发散完成，为你生成了{len(ideas)}个方向"})
-                yield _sse("ideas", {"ideas": ideas})
+                # stream_mode == "updates": payload is {node_name: state_delta}
+                if not isinstance(payload, dict):
+                    continue
+                if "__interrupt__" in payload:
+                    pending_gate = _pending_gate(payload.get("__interrupt__"))
+                    continue
+                for node, delta in payload.items():
+                    if not isinstance(delta, dict):
+                        continue
+                    final_state.update(delta)
+                    step_count += 1
+                    async for event in _forward_node_output(node, delta, emitted, provenance):
+                        yield event
 
-            # Brief
-            brief = result.get("creative_brief")
-            if brief:
-                yield _sse("brief", {"brief": brief})
-                yield _sse("thinking", {"node": "brief", "text": "创意简报已生成"})
+            result = final_state
+            yield _sse("thinking", {"node": "graph", "text": f"工作流完成，共执行 {step_count} 个节点"})
 
-            # Characters
-            characters = result.get("characters", [])
-            if characters:
-                yield _sse("characters", {"characters": characters})
-                yield _sse("thinking", {"node": "character", "text": f"角色设计完成，{len(characters)}个角色"})
+            # A pause surfaces as "__interrupt__" in the update stream. Report
+            # the pending gate so the client can render the right prompt.
+            if pending_gate is None and resume_value is None:
+                pending_gate = _pending_gate_from_state(result)
 
-            # Style
-            style = result.get("style")
-            if style:
-                yield _sse("style", {"style": style})
-                yield _sse("thinking", {"node": "style", "text": "风格设定完成"})
-
-            # Script
-            script = result.get("script")
-            if script:
-                yield _sse("script", {"script": script, **provenance})
-                yield _sse("thinking", {"node": "script", "text": "脚本初稿完成"})
-
-            # Evaluation
-            evaluation = result.get("evaluation")
-            if evaluation:
-                yield _sse("eval", {"evaluation": evaluation})
-
-            # Compliance
-            compliance = result.get("compliance_result")
-            if compliance:
-                yield _sse("compliance", {"compliance": compliance})
-
-            # Rhythm
-            rhythm = result.get("rhythm_result")
-            if rhythm:
-                yield _sse("thinking", {"node": "rhythm", "text": "节奏优化完成"})
-
-            # Storyboard
-            storyboard = result.get("storyboard")
-            if storyboard:
-                yield _sse("storyboard", {"storyboard": storyboard, **provenance})
-                shot_count = storyboard.get("shot_count", len(storyboard.get("shots", [])))
-                yield _sse("thinking", {"node": "storyboard", "text": f"分镜表完成，共{shot_count}个镜头"})
-
-            # Prompt package
-            prompt_pkg = result.get("prompt_package")
-            if prompt_pkg:
-                yield _sse("prompt", {"prompt_package": prompt_pkg})
-                shots_count = len(prompt_pkg.get("shots", [])) if isinstance(prompt_pkg, dict) else 0
-                yield _sse(
-                    "thinking",
-                    {
-                        "node": "prompt",
-                        "text": f"提示词包生成完成，{shots_count}个镜头，支持{len(req.target_models) or 12}个模型",
-                    },
-                )
-
-            # Export
-            export_data = result.get("export_data")
-            if export_data:
-                yield _sse("export", {"export": export_data})
-                yield _sse("thinking", {"node": "export", "text": "提示词包已就绪，可以一键推送到Mago生成"})
-
-            # A pause surfaces as "__interrupt__" on the returned state. Report
-            # the pending gate so the client can render the right prompt, and
-            # remember that this run is resumable rather than finished.
-            interrupts = result.get("__interrupt__") or []
-            pending = _pending_gate(interrupts)
-
-            # Done event with final state summary
             steps = result.get("steps_completed", [])
             yield _sse(
                 "done",
@@ -488,24 +436,22 @@ async def run_agent(req: ChatRequest, request: Request):
                     "state": {
                         "current_step": result.get("current_step", "done"),
                         "steps_completed": steps,
-                        "hitl_required": pending is not None,
-                        "hitl_node": (pending or {}).get("gate", ""),
-                        "hitl_prompt": (pending or {}).get("prompt", ""),
-                        "hitl_payload": (pending or {}).get("payload", {}),
-                        "has_trend": bool(trend_summary),
-                        "has_ideas": bool(ideas),
-                        "has_brief": bool(brief),
-                        "has_characters": bool(characters),
-                        "has_style": bool(style),
-                        "has_script": bool(script),
-                        "has_storyboard": bool(storyboard),
-                        "has_prompt": bool(prompt_pkg),
+                        "hitl_required": pending_gate is not None,
+                        "hitl_node": (pending_gate or {}).get("gate", ""),
+                        "hitl_prompt": (pending_gate or {}).get("prompt", ""),
+                        "hitl_payload": (pending_gate or {}).get("payload", {}),
+                        "has_trend": bool(result.get("trend_summary")),
+                        "has_ideas": bool(result.get("creative_ideas")),
+                        "has_brief": bool(result.get("creative_brief")),
+                        "has_characters": bool(result.get("characters")),
+                        "has_style": bool(result.get("style")),
+                        "has_script": bool(result.get("script")),
+                        "has_storyboard": bool(result.get("storyboard")),
+                        "has_prompt": bool(result.get("prompt_package")),
                         "export_ready": result.get("export_ready", False),
                     },
                 },
             )
-            # Keep a conventional SSE sentinel for generic clients while the
-            # structured ``done`` event remains the source of truth.
             yield "data: [DONE]\n\n"
 
         except asyncio.CancelledError:
@@ -524,6 +470,134 @@ async def run_agent(req: ChatRequest, request: Request):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+async def _astream_graph(graph: Any, graph_input: Any, config: dict[str, Any]) -> AsyncIterator[tuple[str, Any]]:
+    """Yield ``(stream_mode, payload)`` pairs from a graph run.
+
+    ``stream_mode=["updates", "custom"]`` gives us node-level deltas *and* the
+    custom chunks agents emit through ``get_stream_writer()``. Some LangGraph
+    versions yield a single list/tuple per step instead of a pair, so both
+    shapes are normalised here.
+    """
+    async for item in graph.astream(graph_input, config=config, stream_mode=["updates", "custom"]):
+        if isinstance(item, (tuple, list)) and len(item) == 2:
+            mode, payload = item[0], item[1]
+        else:
+            mode, payload = "updates", item
+        yield str(mode), payload
+
+
+def _custom_to_sse(payload: dict[str, Any]) -> list[str]:
+    """Convert an agent-emitted custom chunk into one or more SSE frames."""
+    kind = payload.get("type")
+    if kind == "chunk":
+        text = payload.get("text") or ""
+        if not text:
+            return []
+        return [_sse("chunk", {"text": text, "node": payload.get("node", "")})]
+    if kind == "thinking":
+        return [_sse("thinking", {"node": payload.get("node", ""), "text": payload.get("text", "")})]
+    # Unknown custom payloads are still forwarded so future agents can extend
+    # the protocol without a server change.
+    return [_sse(str(kind or "custom"), payload)]
+
+
+async def _forward_node_output(
+    node: str,
+    delta: dict[str, Any],
+    emitted: set[str],
+    provenance: dict[str, Any],
+) -> AsyncIterator[str]:
+    """Translate one node's state delta into SSE frames.
+
+    Only keys that have not been emitted yet are sent, so a node that preserves
+    an earlier field does not spam the client with duplicates.
+    """
+
+    def take(key: str) -> Any | None:
+        if key in delta and delta[key] and key not in emitted:
+            emitted.add(key)
+            return delta[key]
+        return None
+
+    yield _sse("node", {"node": node})
+
+    trend_summary = take("trend_summary")
+    if trend_summary:
+        yield _sse("thinking", {"node": "trend", "text": "热点研究完成"})
+    topics = take("topic_recommendations")
+    if topics:
+        yield _sse("topics", {"topics": topics})
+
+    ideas = take("creative_ideas")
+    if ideas:
+        yield _sse("thinking", {"node": "ideation", "text": f"创意发散完成，为你生成了{len(ideas)}个方向"})
+        yield _sse("ideas", {"ideas": ideas})
+
+    brief = take("creative_brief")
+    if brief:
+        yield _sse("brief", {"brief": brief})
+        yield _sse("thinking", {"node": "brief", "text": "创意简报已生成"})
+
+    characters = take("characters")
+    if characters:
+        yield _sse("characters", {"characters": characters})
+        yield _sse("thinking", {"node": "character", "text": f"角色设计完成，{len(characters)}个角色"})
+
+    style = take("style")
+    if style:
+        yield _sse("style", {"style": style})
+        yield _sse("thinking", {"node": "style", "text": "风格设定完成"})
+
+    script = take("script")
+    if script:
+        yield _sse("script", {"script": script, **provenance})
+        yield _sse("thinking", {"node": "script", "text": "脚本初稿完成"})
+
+    evaluation = take("evaluation")
+    if evaluation:
+        yield _sse("eval", {"evaluation": evaluation})
+
+    compliance = take("compliance_result")
+    if compliance:
+        yield _sse("compliance", {"compliance": compliance})
+
+    rhythm = take("rhythm_result")
+    if rhythm:
+        yield _sse("thinking", {"node": "rhythm", "text": "节奏优化完成"})
+
+    storyboard = take("storyboard")
+    if storyboard:
+        yield _sse("storyboard", {"storyboard": storyboard, **provenance})
+        shot_count = storyboard.get("shot_count", len(storyboard.get("shots", [])))
+        yield _sse("thinking", {"node": "storyboard", "text": f"分镜表完成，共{shot_count}个镜头"})
+
+    prompt_pkg = take("prompt_package")
+    if prompt_pkg:
+        yield _sse("prompt", {"prompt_package": prompt_pkg})
+        shots_count = len(prompt_pkg.get("shots", [])) if isinstance(prompt_pkg, dict) else 0
+        yield _sse("thinking", {"node": "prompt", "text": f"提示词包生成完成，{shots_count}个镜头"})
+
+    export_data = take("export_data")
+    if export_data:
+        yield _sse("export", {"export": export_data})
+
+
+def _pending_gate_from_state(result: dict[str, Any]) -> dict[str, Any] | None:
+    """Best-effort recovery of a pending gate carried on the final state.
+
+    ``astream`` normally surfaces interrupts through the ``updates`` stream, but
+    when a graph ends on a gate the writer may also leave ``hitl_required`` and
+    ``hitl_node`` set on the state. This keeps the done event accurate in that
+    case.
+    """
+    if not result.get("hitl_required"):
+        return None
+    gate = result.get("hitl_node")
+    if not gate:
+        return None
+    return {"gate": gate, "prompt": result.get("hitl_prompt", ""), "payload": {}}
 
 
 def _pending_gate(interrupts: Any) -> dict[str, Any] | None:

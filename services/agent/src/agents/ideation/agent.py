@@ -13,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 from src.agents.base import BaseAgent
+from src.common.streaming import emit_thinking
 
 IDEATION_SYSTEM_PROMPT = """你是一位顶级短视频创意总监，擅长帮助创作者找到爆款方向。
 
@@ -71,6 +72,7 @@ class IdeationAgent(BaseAgent):
     async def run(self, state: dict[str, Any]) -> dict[str, Any]:
         user_input = state.get("current_input", "")
         self.logger.info("ideation_run", input_length=len(user_input))
+        emit_thinking(self.name, "正在发散创意方向…")
 
         if not self.llm_available:
             # Offline mode: return starter ideas
