@@ -1,0 +1,27 @@
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+
+linters-settings:
+  misspell:
+    locale: US
+  goimports:
+    local-prefixes: mago-agent
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

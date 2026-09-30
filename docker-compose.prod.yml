@@ -1,0 +1,177 @@
+# Production deployment reference
+# - Use managed PostgreSQL/Redis in cloud (RDS/ElastiCache)
+# - Use proper secrets management (Vault/K8s Secrets)
+# - Configure TLS certificates (cert-manager)
+# - Enable resource limits
+# - Requires Docker Compose v2.24+ for !reset overrides.
+# - See docs/deployment.md for full production guide
+# - ALLOWED_ORIGINS must be set to the exact browser origins served by the deployment.
+services:
+  # Keep development infrastructure private when this file is used as an overlay.
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER for production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB for production}
+    ports: !reset []
+  redis:
+    extends:
+      file: docker-compose.yml
+      service: redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD for production}
+    ports: !reset []
+  minio:
+    extends:
+      file: docker-compose.yml
+      service: minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER for production}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD for production}
+    ports: !reset []
+  etcd:
+    extends:
+      file: docker-compose.yml
+      service: etcd
+    ports: !reset []
+  milvus:
+    extends:
+      file: docker-compose.yml
+      service: milvus
+    ports: !reset []
+  otel-collector:
+    extends:
+      file: docker-compose.yml
+      service: otel-collector
+    ports: !reset []
+  prometheus:
+    extends:
+      file: docker-compose.yml
+      service: prometheus
+    ports: !reset []
+  loki:
+    extends:
+      file: docker-compose.yml
+      service: loki
+    ports: !reset []
+  tempo:
+    extends:
+      file: docker-compose.yml
+      service: tempo
+    ports: !reset []
+  grafana:
+    extends:
+      file: docker-compose.yml
+      service: grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER for production}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD for production}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports: !reset []
+  # Langfuse is deployed separately with the official multi-container
+  # deployment. Do not inherit a broken single-container definition here.
+  nginx:
+    image: nginx:1.25-alpine
+    # Do not inherit the development 8080 binding; production is exposed only
+    # through the TLS termination ports below. `!override` replaces the
+    # development binding instead of appending to it.
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/ssl:/etc/nginx/ssl:ro
+      - ./deploy/certbot:/var/www/certbot:ro
+    depends_on:
+      - web
+      - api-gateway
+      - agent
+    restart: unless-stopped
+  api-gateway:
+    extends:
+      file: docker-compose.yml
+      service: api-gateway
+    environment:
+      SERVER_ENV: production
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER for production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB for production}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD for production}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER for production}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD for production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a random value of at least 32 characters}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS for production (for example https://app.example.com)}
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+  agent:
+    extends:
+      file: docker-compose.yml
+      service: agent
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      AGENT_AUTH_ENABLED: "true"
+      # The Agent validates project ownership by calling the Go API from inside
+      # the Compose network. Do not inherit the native-launch default
+      # (localhost:8080), which points back to the Agent container in production.
+      MAGO_API_URL: http://api-gateway:8080
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER for production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB for production}
+      REDIS_URL: ${AGENT_REDIS_URL:?Set AGENT_REDIS_URL for production (for example redis://:password@redis:6379/0; URL-encode special characters)}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER for production}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD for production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a random value of at least 32 characters}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS for production (for example https://app.example.com)}
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+  agent-worker:
+    extends:
+      file: docker-compose.yml
+      service: agent-worker
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      AGENT_AUTH_ENABLED: "true"
+      # The Agent validates project ownership by calling the Go API from inside
+      # the Compose network. Do not inherit the native-launch default
+      # (localhost:8080), which points back to the Agent container in production.
+      MAGO_API_URL: http://api-gateway:8080
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER for production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for production}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB for production}
+      REDIS_URL: ${AGENT_REDIS_URL:?Set AGENT_REDIS_URL for production (for example redis://:password@redis:6379/0; URL-encode special characters)}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER for production}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD for production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a random value of at least 32 characters}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+  web:
+    extends:
+      file: docker-compose.yml
+      service: web
+    ports: !reset []
+    deploy:
+      replicas: 2

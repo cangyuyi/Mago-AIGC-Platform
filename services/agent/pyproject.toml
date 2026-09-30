@@ -1,0 +1,80 @@
+[project]
+name = "mago-agent"
+version = "0.1.0"
+description = "Mago Agent Platform - AI Creative Brain"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-anthropic>=0.2.0",
+    "litellm[proxy]>=1.50.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "jinja2>=3.1.0",
+    "beautifulsoup4>=4.12.0",
+    "python-multipart>=0.0.9",
+    "pyjwt>=2.8.0",
+    "redis>=5.0.0",
+    "arq>=0.28.0",
+    "apscheduler>=3.10.0",
+    "opencv-python-headless>=4.10.0",
+    "yt-dlp>=2024.0.0",
+    "scenedetect>=0.6.0,<0.7.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    "numpy>=1.26.0",
+    "structlog>=24.0.0",
+    # LLM Observability & Tracing (08)
+    "langfuse>=2.30.0",
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-exporter-otlp>=1.27.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
+    "opentelemetry-instrumentation-redis>=0.48b0",
+]
+
+[project.optional-dependencies]
+# Durable LangGraph checkpoint backends for human-in-the-loop pauses. Pick one
+# to match CHECKPOINTER_URL / AGENT_CHECKPOINT_PATH; without them the agent
+# falls back to an in-process MemorySaver (dev/demo only).
+checkpoint-sqlite = [
+    "langgraph-checkpoint-sqlite>=2.0.0",
+]
+checkpoint-postgres = [
+    "langgraph-checkpoint-postgres>=2.0.0",
+    "psycopg[binary,pool]>=3.2.0",
+]
+checkpoint-redis = [
+    "langgraph-checkpoint-redis>=0.1.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "httpx>=0.27.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
+ignore = ["E501", "B904", "SIM102", "SIM105", "SIM108", "UP042"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

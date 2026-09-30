@@ -1,0 +1,519 @@
+{
+  "models": [
+    {
+      "model_id": "midjourney-v7",
+      "display_name": "Midjourney V7",
+      "vendor": "Midjourney",
+      "prompt_type": "image",
+      "max_length": 600,
+      "language": "en",
+      "supports_negative": false,
+      "supports_reference_images": true,
+      "supports_seed": true,
+      "supports_cfg": false,
+      "aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4",
+        "21:9"
+      ],
+      "default_parameters": {
+        "ar": "9:16",
+        "v": 7,
+        "q": 1,
+        "style": "raw"
+      },
+      "quality_booster": "cinematic lighting, ultra detailed, 8k resolution, photorealistic, masterpiece, best quality, professional photography",
+      "universal_negative": "",
+      "style_keywords": "photorealistic, cinematic, editorial",
+      "param_template": "--ar {aspect_ratio} --v 7 --style raw --seed {seed}",
+      "positive_template": "{subject}, {scene}, {shot_description}, {lighting}, {style}, {quality}, {motion}",
+      "notes": "Midjourney V7 uses --style raw for photographic, no --no needed; commas separate concepts; weighs with ::"
+    },
+    {
+      "model_id": "midjourney-v61",
+      "display_name": "Midjourney V6.1",
+      "vendor": "Midjourney",
+      "prompt_type": "image",
+      "max_length": 500,
+      "language": "en",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4"
+      ],
+      "default_parameters": {
+        "ar": "9:16",
+        "v": 6.1,
+        "style": "raw"
+      },
+      "quality_booster": "cinematic lighting, ultra detailed, photorealistic, 8k, masterpiece",
+      "universal_negative": "blurry, distorted, deformed, ugly, low quality, watermark, text",
+      "param_template": "--ar {aspect_ratio} --v 6.1 --style raw --seed {seed}",
+      "positive_template": "{subject}, {scene}, {shot_description}, {lighting}, {style}, {quality}"
+    },
+    {
+      "model_id": "nijijourney-v6",
+      "display_name": "Niji Journey 6（动漫）",
+      "vendor": "Midjourney/Niji",
+      "prompt_type": "image",
+      "max_length": 500,
+      "language": "en",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16",
+        "3:4"
+      ],
+      "default_parameters": {
+        "ar": "9:16",
+        "niji": 6
+      },
+      "quality_booster": "anime style, vibrant colors, detailed illustration, masterpiece, best quality",
+      "universal_negative": "realistic, photo, 3d render, blurry, deformed, low quality",
+      "param_template": "--ar {aspect_ratio} --niji 6 --seed {seed}",
+      "positive_template": "{subject}, {scene}, {shot_description}, {lighting}, anime aesthetic, {quality}"
+    },
+    {
+      "model_id": "flux-dev",
+      "display_name": "FLUX.1 Dev",
+      "vendor": "Black Forest Labs",
+      "prompt_type": "image",
+      "max_length": 700,
+      "language": "en",
+      "supports_negative": true,
+      "supports_reference_images": false,
+      "aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4",
+        "21:9"
+      ],
+      "default_parameters": {
+        "steps": 28,
+        "guidance": 3.5,
+        "width": 1080,
+        "height": 1920
+      },
+      "quality_booster": "highly detailed, professional photography, 8k uhd, natural lighting, film grain, sharp focus",
+      "universal_negative": "blurry, distorted limbs, deformed hands, extra fingers, watermark, text, ugly, low resolution",
+      "positive_template": "{subject} in {scene}, {shot_description}, {lighting}, {style}, {quality}"
+    },
+    {
+      "model_id": "sdxl-1.0",
+      "display_name": "Stable Diffusion XL 1.0",
+      "vendor": "Stability AI",
+      "prompt_type": "image",
+      "max_length": 800,
+      "language": "en",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4"
+      ],
+      "default_parameters": {
+        "steps": 30,
+        "cfg_scale": 7,
+        "sampler": "DPM++ 2M Karras",
+        "width": 1080,
+        "height": 1920
+      },
+      "quality_booster": "masterpiece, best quality, ultra detailed, 8k, photorealistic, sharp focus, professional photography, detailed skin texture",
+      "universal_negative": "worst quality, low quality, blurry, deformed, bad anatomy, bad hands, missing fingers, extra digits, cropped, watermark, text, jpeg artifacts, ugly, duplicate, mutated, disfigured",
+      "positive_template": "{subject}, {scene}, {shot_description}, {lighting}, {style}, {quality}"
+    },
+    {
+      "model_id": "kling-v3",
+      "display_name": "可灵 3.0（Kling）",
+      "vendor": "快手/Kuaishou",
+      "prompt_type": "video",
+      "max_length": 800,
+      "language": "zh",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "supports_seed": true,
+      "aspect_ratios": [
+        "9:16",
+        "16:9",
+        "1:1"
+      ],
+      "default_parameters": {
+        "duration": 5,
+        "fps": 24,
+        "motion_strength": 3,
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "4K分辨率，电影级画质，皮肤质感自然通透，细节精致，细腻光影，胶片质感",
+      "universal_negative": "模糊，变形手，畸形手指，多余肢体，低分辨率，水印，文字，过曝，噪点，蜡像感，面部扭曲，画面闪烁抖动",
+      "positive_template": "{subject}{character_fragment}，在{scene}中，{shot_description}，{lighting}，{color_tone}，{style}，{motion}，{quality}",
+      "camera_movement_cn": {
+        "static": "固定机位",
+        "push_in": "镜头缓缓推近",
+        "pull_out": "镜头拉远",
+        "pan_left": "镜头左摇",
+        "pan_right": "镜头右摇",
+        "tilt_up": "镜头上摇",
+        "tilt_down": "镜头下摇",
+        "tracking": "跟随拍摄",
+        "zoom_in": "快速放大",
+        "dolly_out": "后退拉远",
+        "orbit": "环绕镜头",
+        "handheld": "手持晃动",
+        "slow_motion": "慢动作",
+        "time_lapse": "延时摄影"
+      },
+      "notes": "中文prompt效果最好；支持首尾帧参考；运动强度1-10；5s/10s时长可选"
+    },
+    {
+      "model_id": "jimeng-2.0",
+      "display_name": "即梦 2.0（Jimeng）",
+      "vendor": "字节跳动/ByteDance",
+      "prompt_type": "video",
+      "max_length": 600,
+      "language": "zh",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "9:16",
+        "16:9",
+        "1:1"
+      ],
+      "default_parameters": {
+        "duration": 5,
+        "fps": 24,
+        "motion_strength": 4,
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "高清画质，细腻细节，电影感画面，自然肤色，逼真光影",
+      "universal_negative": "模糊，变形，画面抖动，文字水印，低画质，畸形",
+      "positive_template": "{subject}{character_fragment}，{scene}，{shot_description}，{lighting}，{style}，{motion}，{quality}",
+      "notes": "中文prompt；支持图片参考生成视频"
+    },
+    {
+      "model_id": "runway-gen4",
+      "display_name": "Runway Gen-4",
+      "vendor": "Runway",
+      "prompt_type": "video",
+      "max_length": 500,
+      "language": "en",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "16:9",
+        "9:16",
+        "1:1"
+      ],
+      "default_parameters": {
+        "duration": 5,
+        "fps": 24,
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "cinematic 4K, natural motion, photorealistic, detailed textures, professional cinematography, shallow depth of field",
+      "universal_negative": "blurry, distorted, unnatural motion, jittery, low resolution, watermark, deformed limbs",
+      "positive_template": "{subject}{character_fragment} in {scene}, {shot_description}, {lighting}, {style}, {motion}, {quality}",
+      "notes": "English prompts; supports image-to-video with motion brush; 5s/10s"
+    },
+    {
+      "model_id": "pika-2.0",
+      "display_name": "Pika 2.0",
+      "vendor": "Pika Labs",
+      "prompt_type": "video",
+      "max_length": 400,
+      "language": "en",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "16:9",
+        "9:16",
+        "1:1",
+        "4:5"
+      ],
+      "default_parameters": {
+        "duration": 4,
+        "fps": 24,
+        "aspect_ratio": "9:16",
+        "motion": 2
+      },
+      "quality_booster": "cinematic, high quality, smooth motion, detailed, film grain, professional",
+      "universal_negative": "blurry, distorted, choppy, watermark, text, deformed",
+      "positive_template": "{subject}{character_fragment}, {scene}, {shot_description}, {lighting}, {style}, {motion}, {quality}",
+      "notes": "English prompts; supports region modification; motion strength 1-4"
+    },
+    {
+      "model_id": "sora-turbo",
+      "display_name": "Sora Turbo",
+      "vendor": "OpenAI",
+      "prompt_type": "video",
+      "max_length": 800,
+      "language": "en",
+      "supports_negative": false,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "16:9",
+        "9:16",
+        "1:1",
+        "21:9"
+      ],
+      "default_parameters": {
+        "duration": 5,
+        "resolution": "1080p",
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "cinematic filmmaking, naturalistic lighting and motion, photorealistic detail, rich textures, 35mm film quality, subtle camera movement",
+      "universal_negative": "",
+      "positive_template": "{subject}{character_fragment} in {scene}, {shot_description}, {lighting}, {style}, {motion}, {quality}. Shot on {camera} with {lens}.",
+      "notes": "Detailed natural language descriptions work best; supports storyboard mode with multiple clips; no negative prompts"
+    },
+    {
+      "model_id": "vidu-2.0",
+      "display_name": "Vidu 2.0",
+      "vendor": "生数科技/Shengshu",
+      "prompt_type": "video",
+      "max_length": 500,
+      "language": "zh",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "9:16",
+        "16:9",
+        "1:1"
+      ],
+      "default_parameters": {
+        "duration": 4,
+        "fps": 24,
+        "motion_strength": 3,
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "高清画质，细节丰富，电影质感，自然流畅动作",
+      "universal_negative": "模糊，变形，抖动，水印，低画质",
+      "positive_template": "{subject}{character_fragment}，{scene}，{shot_description}，{lighting}，{style}，{motion}，{quality}"
+    },
+    {
+      "model_id": "hailuo-v1",
+      "display_name": "海螺AI（Hailuo/MiniMax）",
+      "vendor": "MiniMax",
+      "prompt_type": "video",
+      "max_length": 600,
+      "language": "zh",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "9:16",
+        "16:9",
+        "1:1"
+      ],
+      "default_parameters": {
+        "duration": 6,
+        "fps": 25,
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "超清画质，真实物理运动，电影级光影，自然表情动作，细节精致",
+      "universal_negative": "模糊，畸形，动作僵硬，画面闪烁，水印文字，低分辨率",
+      "positive_template": "{subject}{character_fragment}，{scene}，{shot_description}，{lighting}，{style}，{motion}，{quality}",
+      "notes": "中文prompt；以物理真实运动见长；支持6s长视频"
+    },
+    {
+      "model_id": "wanx-2.1",
+      "display_name": "通义万相 2.1（Wanx）",
+      "vendor": "阿里/Alibaba",
+      "prompt_type": "video",
+      "max_length": 500,
+      "language": "zh",
+      "supports_negative": true,
+      "supports_reference_images": true,
+      "aspect_ratios": [
+        "9:16",
+        "16:9",
+        "1:1"
+      ],
+      "default_parameters": {
+        "duration": 5,
+        "fps": 24,
+        "aspect_ratio": "9:16"
+      },
+      "quality_booster": "高清4K画质，电影级调色，细节清晰，自然流畅",
+      "universal_negative": "模糊，变形，低质量，水印，抖动，畸形",
+      "positive_template": "{subject}{character_fragment}，{scene}，{shot_description}，{lighting}，{style}，{motion}，{quality}"
+    },
+    {
+      "model_id": "dalle-3",
+      "display_name": "DALL-E 3",
+      "vendor": "OpenAI",
+      "prompt_type": "image",
+      "max_length": 1000,
+      "language": "en",
+      "supports_negative": false,
+      "supports_reference_images": false,
+      "aspect_ratios": [
+        "1:1",
+        "16:9",
+        "9:16",
+        "1792x1024",
+        "1024x1792"
+      ],
+      "default_parameters": {
+        "size": "1024x1792",
+        "quality": "hd",
+        "style": "vivid"
+      },
+      "quality_booster": "photorealistic, high detail, professional composition",
+      "universal_negative": "",
+      "positive_template": "A cinematic shot of {subject} in {scene}, {shot_description}, {lighting}, {style}, {quality}",
+      "notes": "Natural language detailed descriptions; rewrites prompts automatically; no negative prompts; supports vivid/natural style"
+    }
+  ],
+  "shot_sizes": {
+    "extreme_close_up": {
+      "cn": "极特写(ECU)",
+      "en": "extreme close-up shot, ECU"
+    },
+    "close_up": {
+      "cn": "特写(CU)",
+      "en": "close-up shot, CU"
+    },
+    "medium_close_up": {
+      "cn": "近景(MCU)",
+      "en": "medium close-up shot, MCU"
+    },
+    "medium": {
+      "cn": "中景(MS)",
+      "en": "medium shot, MS, waist up"
+    },
+    "medium_wide": {
+      "cn": "中全景",
+      "en": "medium wide shot, MLS"
+    },
+    "wide": {
+      "cn": "全景(WS)",
+      "en": "wide shot, WS, full body"
+    },
+    "extreme_wide": {
+      "cn": "远景/大全景(EWS)",
+      "en": "extreme wide shot, establishing shot"
+    }
+  },
+  "camera_angles": {
+    "eye_level": {
+      "cn": "平视机位",
+      "en": "eye level angle"
+    },
+    "low_angle": {
+      "cn": "仰拍",
+      "en": "low angle shot, looking up"
+    },
+    "high_angle": {
+      "cn": "俯拍",
+      "en": "high angle shot, looking down"
+    },
+    "birds_eye": {
+      "cn": "鸟瞰/顶视",
+      "en": "bird's eye view, overhead shot"
+    },
+    "dutch_angle": {
+      "cn": "荷兰角/倾斜",
+      "en": "dutch angle, tilted frame"
+    },
+    "over_shoulder": {
+      "cn": "过肩镜头",
+      "en": "over-the-shoulder shot, OTS"
+    }
+  },
+  "camera_movements": {
+    "static": {
+      "cn": "固定机位",
+      "en": "static camera, tripod shot"
+    },
+    "push_in": {
+      "cn": "镜头缓缓推近",
+      "en": "slow push in, dolly in"
+    },
+    "pull_out": {
+      "cn": "镜头拉远",
+      "en": "dolly out, pull back"
+    },
+    "pan_left": {
+      "cn": "镜头左摇",
+      "en": "pan left"
+    },
+    "pan_right": {
+      "cn": "镜头右摇",
+      "en": "pan right"
+    },
+    "tilt_up": {
+      "cn": "镜头上摇",
+      "en": "tilt up"
+    },
+    "tilt_down": {
+      "cn": "镜头下摇",
+      "en": "tilt down"
+    },
+    "tracking": {
+      "cn": "跟随拍摄",
+      "en": "tracking shot, following subject"
+    },
+    "zoom_in": {
+      "cn": "快速放大",
+      "en": "quick zoom in"
+    },
+    "orbit": {
+      "cn": "环绕镜头",
+      "en": "orbiting shot, 360 orbit"
+    },
+    "handheld": {
+      "cn": "手持摄影",
+      "en": "handheld camera, subtle handheld shake"
+    },
+    "slow_motion": {
+      "cn": "慢动作",
+      "en": "slow motion at high frame rate"
+    }
+  },
+  "lighting_types": {
+    "natural": {
+      "cn": "自然光",
+      "en": "natural lighting"
+    },
+    "soft_studio": {
+      "cn": "柔和影棚光",
+      "en": "soft studio lighting, beauty dish"
+    },
+    "dramatic_contrast": {
+      "cn": "强对比戏剧光",
+      "en": "dramatic chiaroscuro lighting, high contrast"
+    },
+    "backlit_silhouette": {
+      "cn": "逆光剪影",
+      "en": "backlit silhouette, rim lighting"
+    },
+    "golden_hour": {
+      "cn": "黄金时刻光",
+      "en": "golden hour warm sunlight, lens flare"
+    },
+    "neon_cool": {
+      "cn": "冷色霓虹",
+      "en": "neon lit, cool blue neon lights"
+    },
+    "bright_even": {
+      "cn": "明亮均匀布光",
+      "en": "even bright studio lighting"
+    },
+    "tungsten_warm": {
+      "cn": "暖黄钨丝灯",
+      "en": "warm tungsten practical lights"
+    }
+  }
+}

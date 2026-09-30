@@ -1,0 +1,18 @@
+{
+  "name": "mago-aigc-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build:web": "pnpm --filter mago-agent-web build",
+    "typecheck:web": "pnpm --filter mago-agent-web typecheck",
+    "typecheck": "pnpm --filter mago-agent-web typecheck",
+    "lint": "pnpm --filter mago-agent-web lint",
+    "build": "pnpm --filter mago-agent-web build"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.28"
+    }
+  }
+}

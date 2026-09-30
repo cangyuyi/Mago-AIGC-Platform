@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Mago</title>
+  <rect width="64" height="64" rx="16" fill="#007aff"/>
+  <path fill="#fff" d="m32 11 3.8 13.2L49 28l-13.2 3.8L32 45l-3.8-13.2L15 28l13.2-3.8L32 11Zm14.5 29.2 1.6 5.7 5.7 1.6-5.7 1.6-1.6 5.7-1.6-5.7-5.7-1.6 5.7-1.6 1.6-5.7Z"/>
+</svg>

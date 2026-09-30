@@ -1,0 +1,39 @@
+# VCS and local tooling
+.git
+.git/**
+.github
+.tools
+.agents
+.codex
+
+# Dependencies and build output
+node_modules
+**/node_modules
+.next
+**/.next
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+*.py[cod]
+*.tsbuildinfo
+
+# Local configuration and runtime noise
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+.DS_Store
+
+# Local artifacts
+screenshots
+coverage
+htmlcov
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Editor and OS files
+.vscode
+.idea

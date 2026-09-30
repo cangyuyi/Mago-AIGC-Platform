@@ -1,0 +1,101 @@
+# Mago Agent Platform - 轻量基础设施（无 Milvus / etcd / 可观测性栈）
+#
+# 适用场景：只想跑通「登录 → 项目 → 脚本 → 分镜 → 提示词包 → 导出」主链路。
+# 趋势热点/RAG 检索才需要 Milvus，普通开发可以先不启动它（可省约 4GB 内存）。
+#
+#   docker compose -f docker-compose.min.yml up -d      # 或 make docker-min
+#   docker compose -f docker-compose.min.yml run --rm migrate
+#
+# 需要完整栈时改用根目录的 docker-compose.yml。
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mago-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mago}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mago_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-mago}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mago-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "6379:6379"
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD";
+        else
+          exec redis-server --appendonly yes;
+        fi
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          if [ -n "$$REDIS_PASSWORD" ]; then
+            redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG;
+          else
+            redis-cli ping | grep -q PONG;
+          fi
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: mago-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-mago}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-mago_secret123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  migrate:
+    image: gomicro/goose:3.26.0
+    container_name: mago-migrate
+    entrypoint: ["goose"]
+    command:
+      - -dir
+      - /migrations
+      - postgres
+      - "postgresql://${POSTGRES_USER:-mago}:${POSTGRES_PASSWORD_URLENCODED:-${POSTGRES_PASSWORD:-mago_secret}}@postgres:5432/${POSTGRES_DB:-mago}?sslmode=disable"
+      - up
+    volumes:
+      - ./services/api-gateway/migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

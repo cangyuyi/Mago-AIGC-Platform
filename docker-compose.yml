@@ -1,0 +1,344 @@
+# Mago Agent Platform - Development Docker Compose
+# Includes all infrastructure + 3 services + observability stack
+
+services:
+  # ==========================================================================
+  # Core Infrastructure
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: mago-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mago}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mago_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-mago}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mago-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "6379:6379"
+    # Keep local development passwordless by default, while allowing the
+    # production overlay to require authentication without duplicating the
+    # service definition.
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD";
+        else
+          exec redis-server --appendonly yes;
+        fi
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          if [ -n "$$REDIS_PASSWORD" ]; then
+            redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG;
+          else
+            redis-cli ping | grep -q PONG;
+          fi
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: mago-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-mago}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-mago_secret123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.12
+    container_name: mago-etcd
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  milvus:
+    image: milvusdb/milvus:v2.4-latest
+    container_name: mago-milvus
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "19530:19530"
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Observability Stack (08)
+  # ==========================================================================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.97.0
+    container_name: mago-otel
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: mago-prometheus
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: mago-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    restart: unless-stopped
+
+  tempo:
+    image: grafana/tempo:2.4.0
+    container_name: mago-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./deploy/observability/tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: mago-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: mago_grafana
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./deploy/observability/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./deploy/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    restart: unless-stopped
+
+  # Langfuse is intentionally not bundled here. Current Langfuse self-hosting
+  # requires a web service, worker, ClickHouse, Redis, and object storage; a
+  # single `langfuse/langfuse:latest` container is not a valid deployment.
+  # Configure LANGFUSE_HOST/keys to use Langfuse Cloud or an independently
+  # deployed, version-pinned Langfuse stack.
+
+  # ==========================================================================
+  # Application Services
+  # ==========================================================================
+  migrate:
+    image: gomicro/goose:3.26.0
+    container_name: mago-migrate
+    entrypoint: ["goose"]
+    command:
+      - -dir
+      - /migrations
+      - postgres
+      - "postgresql://${POSTGRES_USER:-mago}:${POSTGRES_PASSWORD_URLENCODED:-${POSTGRES_PASSWORD:-mago_secret}}@postgres:5432/${POSTGRES_DB:-mago}?sslmode=disable"
+      - up
+    volumes:
+      - ./services/api-gateway/migrations:/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    environment:
+      API_PORT: 8080
+      SERVER_ENV: development
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-mago}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mago_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-mago}
+      POSTGRES_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      AGENT_BASE_URL: http://agent:8000
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: ./services/agent
+    environment:
+      DEBUG: ${DEBUG:-true}
+      ENVIRONMENT: ${APP_ENV:-development}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-gpt-4o-mini}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      TREND_INSIGHTS_TIMEOUT_SECONDS: ${TREND_INSIGHTS_TIMEOUT_SECONDS:-15}
+      CRAWL_USE_SAMPLE_DATA: ${CRAWL_USE_SAMPLE_DATA:-false}
+      DOUYIN_COOKIE: ${DOUYIN_COOKIE:-}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      AGENT_AUTH_ENABLED: ${AGENT_AUTH_ENABLED:-false}
+      MAGO_API_URL: http://api-gateway:8080
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ZHIPU_API_KEY: ${ZHIPU_API_KEY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-mago}:${POSTGRES_PASSWORD_URLENCODED:-${POSTGRES_PASSWORD:-mago_secret}}@postgres:5432/${POSTGRES_DB:-mago}?sslmode=disable
+      # Keep the host-native REDIS_URL (localhost) separate from the URL used
+      # by the container network. The latter must resolve the redis service.
+      REDIS_URL: ${AGENT_REDIS_URL:-redis://redis:6379/0}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-mago}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-mago_secret123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-mago}
+      LANGFUSE_ENABLED: ${LANGFUSE_ENABLED:-false}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_HOST: ${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_ENABLED: "true"
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  agent-worker:
+    extends:
+      service: agent
+    command: ["arq", "src.worker.WorkerSettings"]
+    # The worker shares the Agent image and Redis credentials but does not
+    # expose an HTTP port. It is the only process that executes long tasks.
+    expose: []
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      # Next.js rewrites are resolved during `next build`, so these must be
+      # available as build args rather than only runtime environment values.
+      args:
+        API_GATEWAY_URL: ${API_GATEWAY_URL:-http://api-gateway:8080}
+        AGENT_URL: ${AGENT_URL:-http://agent:8000}
+    environment:
+      API_GATEWAY_URL: http://api-gateway:8080
+      AGENT_URL: http://agent:8000
+      NEXT_PUBLIC_API_URL: /api/v1
+      NEXT_PUBLIC_AGENT_URL: /api/agent
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.25-alpine
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+      - api-gateway
+      - agent
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  etcd_data:
+  milvus_data:
+  prometheus_data:
+  loki_data:
+  tempo_data:
+  grafana_data:

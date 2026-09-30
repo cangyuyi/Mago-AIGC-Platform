@@ -1,25 +1,91 @@
-# 敏感配置文件（绝对不要提交）
+# Dependencies
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+*.pyo
+vendor/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+bin/
+*.exe
+
+# Environment
 .env
 .env.local
-config.js
-config.json
-secrets/
-*.key
+.env.*.local
 *.pem
-api_keys.txt
-passwords.txt
 
-# 系统文件
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 .DS_Store
-Thumbs.db
+*.db
 
-# 大文件/未公开素材
-raw-assets/
-internal-docs/
-*.psd
-*.fig
-screenshots/raw/
-
-# 日志文件
-*.log
+# Logs
 logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Python
+*.egg-info/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+.ipynb_checkpoints/
+venv/
+.venv/
+.env/
+.python-version
+site/
+.pytest_cache/
+
+# Go
+bin/
+*.test
+*.out
+go.work
+go.work.sum
+
+# Docker
+.docker/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Media uploads
+uploads/
+tmp/
+data/
+
+# UV
+# Keep uv.lock tracked for reproducible Agent builds.
+
+# Local tools
+.tools/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Go compiled binaries (no extension)
+services/api-gateway/server
+
+# E2E test artifacts
+.e2e-shots/

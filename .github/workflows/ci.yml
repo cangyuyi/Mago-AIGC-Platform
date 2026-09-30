@@ -1,0 +1,461 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, feature/**]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch cancels the run that is still in flight.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend - Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Type check
+        run: pnpm tsc --noEmit
+      - name: Unit & component tests
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  browser-e2e:
+    name: Browser E2E - Demo creator journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium and system dependencies
+        run: pnpm exec playwright-core install --with-deps chromium
+      - name: Build demo-mode web app
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_DEMO_MODE: "true"
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Start standalone web app
+        run: pnpm start > /tmp/mago-web-e2e.log 2>&1 &
+        env:
+          HOSTNAME: 127.0.0.1
+          PORT: "3000"
+      - name: Wait for web app
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail http://127.0.0.1:3000/login >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/mago-web-e2e.log
+          echo "Web app did not become ready within 60 seconds" >&2
+          exit 1
+      - name: Run creator journey in Chromium
+        run: |
+          export CHROME_PATH="$(node -e 'process.stdout.write(require("playwright-core").chromium.executablePath())')"
+          node ../../scripts/e2e_ui.mjs --demo --base http://127.0.0.1:3000 --shots /tmp/mago-e2e
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mago-browser-e2e
+          path: |
+            /tmp/mago-e2e/
+            /tmp/mago-web-e2e.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  agent-e2e:
+    name: Full-stack browser E2E - Web, Gateway, Agent, PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mago
+          POSTGRES_PASSWORD: mago_secret
+          POSTGRES_DB: mago
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mago -d mago"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - name: Install Web dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Agent dependencies
+        working-directory: services/agent
+        run: uv sync --frozen
+      - name: Install Chromium and system dependencies
+        working-directory: apps/web
+        run: pnpm exec playwright-core install --with-deps chromium
+      - name: Build production Web app with live service targets
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          AGENT_URL: http://127.0.0.1:8000
+          API_GATEWAY_URL: http://127.0.0.1:8080
+          NEXT_PUBLIC_DEMO_MODE: "false"
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Start real API Gateway
+        working-directory: services/api-gateway
+        run: go run ./cmd/server > /tmp/mago-api-e2e.log 2>&1 &
+        env:
+          API_PORT: "8080"
+          SERVER_ENV: development
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: "5432"
+          POSTGRES_USER: mago
+          POSTGRES_PASSWORD: mago_secret
+          POSTGRES_DB: mago
+          POSTGRES_SSLMODE: disable
+          JWT_SECRET: ci-only-e2e-secret-with-adequate-length-2026
+          AGENT_BASE_URL: http://127.0.0.1:8000
+      - name: Wait for API Gateway health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail http://127.0.0.1:8080/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/mago-api-e2e.log
+          echo "API Gateway did not become ready within 60 seconds" >&2
+          exit 1
+      - name: Start real Agent service without LLM credentials
+        working-directory: services/agent
+        run: uv run python -m src.main > /tmp/mago-agent-e2e.log 2>&1 &
+        env:
+          OPENAI_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+          GOOGLE_API_KEY: ""
+          AGENT_AUTH_ENABLED: "false"
+          DEBUG: "false"
+          PORT: "8000"
+      - name: Wait for Agent health endpoint
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail http://127.0.0.1:8000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/mago-agent-e2e.log
+          echo "Agent did not become ready within 60 seconds" >&2
+          exit 1
+      - name: Start production Next.js server
+        working-directory: apps/web
+        run: pnpm start > /tmp/mago-web-agent-e2e.log 2>&1 &
+        env:
+          HOSTNAME: 127.0.0.1
+          PORT: "3000"
+      - name: Wait for Next.js
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail http://127.0.0.1:3000/login >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/mago-web-agent-e2e.log
+          echo "Next.js did not become ready within 60 seconds" >&2
+          exit 1
+      - name: Run real Agent creator journey through Next.js proxy
+        run: >-
+          python3 scripts/smoke_journey.py
+          --agent http://127.0.0.1:8000
+          --web http://127.0.0.1:3000
+          --out /tmp/mago-smoke-pack.md
+      - name: Run full creator journey in Chromium with real auth and project APIs
+        run: |
+          export CHROME_PATH="$(node -e 'process.stdout.write(require("playwright-core").chromium.executablePath())')"
+          node scripts/e2e_ui.mjs --live --base http://127.0.0.1:3000 --shots /tmp/mago-live-e2e
+      - name: Upload full-stack browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mago-fullstack-e2e
+          path: |
+            /tmp/mago-api-e2e.log
+            /tmp/mago-agent-e2e.log
+            /tmp/mago-web-agent-e2e.log
+            /tmp/mago-smoke-pack.md
+            /tmp/mago-live-e2e/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  api-e2e:
+    name: API E2E - PostgreSQL auth and project ownership
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mago
+          POSTGRES_PASSWORD: mago_secret
+          POSTGRES_DB: mago
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mago -d mago"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Start real API Gateway
+        working-directory: services/api-gateway
+        run: go run ./cmd/server > /tmp/mago-api-e2e.log 2>&1 &
+        env:
+          API_PORT: "8080"
+          SERVER_ENV: development
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: "5432"
+          POSTGRES_USER: mago
+          POSTGRES_PASSWORD: mago_secret
+          POSTGRES_DB: mago
+          POSTGRES_SSLMODE: disable
+          JWT_SECRET: ci-only-e2e-secret-with-adequate-length-2026
+          AGENT_BASE_URL: http://127.0.0.1:8000
+      - name: Wait for Gateway health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --silent --show-error --fail http://127.0.0.1:8080/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/mago-api-e2e.log
+          echo "API Gateway did not become ready within 60 seconds" >&2
+          exit 1
+      - name: Run database-backed auth and project journey
+        run: python3 scripts/e2e_api.py --base http://127.0.0.1:8080
+      - name: Upload API E2E server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mago-api-e2e
+          path: /tmp/mago-api-e2e.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  go:
+    name: Go API - Vet / Race Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Vet
+        run: go vet ./...
+      - name: Test with coverage
+        run: go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+      - name: Summarize coverage
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            go tool cover -func=coverage.out | tail -1 | sed 's/^/Total coverage: /' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: services/api-gateway/coverage.out
+          if-no-files-found: ignore
+
+  python:
+    name: Agent - Ruff / Mypy / Pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+      - name: Lint (ruff)
+        run: uv run ruff check src/ tests/
+      - name: Type check (mypy)
+        run: uv run mypy src/ --ignore-missing-imports --check-untyped-defs
+      - name: Test
+        run: uv run pytest tests/ -v --tb=short
+
+  # Migrations must apply on a fresh database and preserve array data across the
+  # schema-alignment downgrade/re-upgrade path for existing installations.
+  migrations:
+    name: Database - Migrations up / down / up
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mago
+          POSTGRES_PASSWORD: mago_secret
+          POSTGRES_DB: mago
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mago -d mago"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GOOSE_IMAGE: gomicro/goose:3.26.0
+      DB_URL: postgresql://mago:mago_secret@localhost:5432/mago?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply all migrations
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
+            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" up
+      - name: Seed JSON arrays before downgrade
+        run: |
+          docker run --rm --network host postgres:16-alpine \
+            psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO projects (id, name, owner_id) VALUES
+            ('00000000-0000-0000-0000-000000000601', 'migration rollback check', '00000000-0000-0000-0000-000000000001');
+          INSERT INTO scripts (id, project_id, title) VALUES
+            ('00000000-0000-0000-0000-000000000602', '00000000-0000-0000-0000-000000000601', 'migration rollback check');
+          INSERT INTO storyboards (id, project_id, script_id) VALUES
+            ('00000000-0000-0000-0000-000000000603', '00000000-0000-0000-0000-000000000601', '00000000-0000-0000-0000-000000000602');
+          INSERT INTO prompt_packages (id, project_id, storyboard_id, selected_models) VALUES
+            ('00000000-0000-0000-0000-000000000604', '00000000-0000-0000-0000-000000000601', '00000000-0000-0000-0000-000000000603', '["sora", "kling"]'::jsonb);
+          INSERT INTO model_configs (model_id, display_name, vendor, prompt_type, aspect_ratios) VALUES
+            ('migration-rollback-check', 'Migration rollback check', 'test', 'image', '["1:1", "16:9"]'::jsonb);
+          SQL
+      - name: Roll back the schema-alignment migration and verify data
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
+            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" down
+          rollback_check=$(docker run --rm --network host postgres:16-alpine \
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -tA -c "
+              SELECT
+                (SELECT selected_models = ARRAY['sora', 'kling']::text[] FROM prompt_packages WHERE id = '00000000-0000-0000-0000-000000000604')
+                AND
+                (SELECT aspect_ratios = ARRAY['1:1', '16:9']::text[] FROM model_configs WHERE model_id = 'migration-rollback-check');")
+          test "$rollback_check" = "t"
+      - name: Re-apply alignment and roll back all migrations
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
+            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" up
+          reapply_check=$(docker run --rm --network host postgres:16-alpine \
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -tA -c "
+              SELECT
+                (SELECT selected_models = '["sora", "kling"]'::jsonb FROM prompt_packages WHERE id = '00000000-0000-0000-0000-000000000604')
+                AND
+                (SELECT aspect_ratios = '["1:1", "16:9"]'::jsonb FROM model_configs WHERE model_id = 'migration-rollback-check');")
+          test "$reapply_check" = "t"
+          docker run --rm --network host \
+            -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
+            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" down -all
+          docker run --rm --network host \
+            -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
+            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" up
+
+  # Compose files reference these three build contexts; a Dockerfile that no
+  # longer compiles breaks every "make docker-up", so catch it on the PR.
+  dockerfiles:
+    name: Docker - Build smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API Gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/api-gateway
+          push: false
+          tags: mago-api-gateway:ci
+          cache-from: type=gha,scope=api-gateway
+          cache-to: type=gha,mode=max,scope=api-gateway
+      - name: Build Agent image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/agent
+          push: false
+          tags: mago-agent:ci
+          cache-from: type=gha,scope=agent
+          cache-to: type=gha,mode=max,scope=agent
+      - name: Build Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          tags: mago-web:ci
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
