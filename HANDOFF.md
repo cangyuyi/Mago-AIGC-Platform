@@ -849,3 +849,34 @@ docker compose up -d postgres redis minio etcd milvus
 - 当前机器仍没有 Docker CLI/daemon、Nginx、FFmpeg、Redis CLI，因此 Compose 实机启动、Nginx `-t`、视频文件分析和 Redis/Worker 重启联调仍需在具备这些依赖的机器上执行。
 - iCloud 工作区直接生成 `.next` 可能触发 `EPERM`，生产构建已在临时同等源码副本验证；这不是应用代码错误。
 
+
+## 🔄 2026-09-30 更新：CI 全红五项 → 七绿，两个深层根因已定位
+
+### 前情
+第一轮推送（`b2f4872`、`854dcdc`）后 CI 从 4/9 升到 **7 success / 2 failure**。剩余两项为本轮处理对象。
+
+### 根因一：数据库迁移从一开始就跑不起来
+- 症状：CI `Database - Migrations` 报 `panic: goose: duplicate version 1 detected`。
+- 真因：迁移目录用了 golang-migrate 的拆分命名（`000001_init_schema.up.sql` / `.down.sql`），但项目实际用 **goose**。goose 按文件名前导数字取版本号，up/down 两个文件都是 version 1，直接 panic。**任何环境都从未成功迁移过**。
+- 修复：6 组文件合并为 goose 单文件（`000001_init_schema.sql` … `000006_schema_alignment.sql`，各含 `-- +goose Up` / `-- +goose Down`），SQL 忠实保留；`deploy/postgres/00-apply-migrations.sh` 原 glob `*.up.sql` 必然为空，改为遍历 `*.sql` 并用 `sed` 抽取 Up 段。
+- 本机验证：结构校验 6 文件全过、版本唯一、Up/Down 各一；`bash -n` 通过。本机无 Docker/goose/PostgreSQL，**真实迁移执行由 CI 验证**。
+
+### 根因二：网关 CORS 把浏览器全部请求挡在路由之前
+- 症状：full-stack E2E `page.waitForURL(/dashboard)` 30s 超时。
+- 铁证：下载 CI artifact 的网关日志，`POST /api/v1/auth/register status: 403 ... latency: 6.772µs`——6 微秒返回，请求根本没进 handler。
+- 真因：`gin-contrib/cors@v1.7.2` 对带 `Origin` 且不在 `AllowOrigins` 的请求**在路由前** `AbortWithStatus(403)`。CI 页面源是 `http://127.0.0.1:3000`，而默认白名单只有 `http://localhost:3000,http://localhost`，浏览器视二者为不同源。API smoke journey 用 Python 直连不带 `Origin`，所以一直绿，掩盖了问题。
+- 修复：网关默认白名单补入 `127.0.0.1` 变体（`config.go` + `config_test.go` 同步）、`.env.example`、`docker-compose.yml`；CI 两个浏览器 job 显式设 `ALLOWED_ORIGINS: http://127.0.0.1:3000`。
+- 本机复现验证：stub 网关 + standalone 前端，真实 Chromium 打开 `http://127.0.0.1:3011`，注册成功并跳 `/dashboard`。
+- `scripts/e2e_ui.mjs` 注册步骤新增诊断（抓 register 响应状态/响应体、失败打印登录页文案 + 截图），避免下次只剩一句 Timeout。
+
+### 澄清（避免误导）
+- `API_GATEWAY_URL` / `AGENT_URL` 的**运行时** env 对 Next standalone rewrite **无效**——rewrite 在 build 时烘焙进 `routes-manifest.json`（本机实测）。CI 保留这两行仅作文档；真正的修复是 CORS 白名单。
+
+### 本机回归
+- 前端 `vitest` **70 passed**、`eslint` 通过、`tsc --noEmit` 通过、`next build` 通过。
+- Agent `pytest` **99 passed**。
+- 网关 `go vet ./...` + `go build ./...` 通过；`go test` 因本机 macOS 缺 `LC_UUID` 无法执行（环境问题，与改动无关），交 CI。
+- 结构/语法检查：迁移文件、`bash -n`、`node --check`、CI YAML 解析全部通过。
+
+### 仍需外部环境确认
+- 无 Docker / goose / PostgreSQL，真实迁移与容器级 full-stack E2E 只能在 CI 上验证，**以 CI 结果为准**。

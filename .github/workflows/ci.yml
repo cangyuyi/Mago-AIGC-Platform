@@ -165,6 +165,9 @@ jobs:
           POSTGRES_SSLMODE: disable
           JWT_SECRET: ci-only-e2e-secret-with-adequate-length-2026
           AGENT_BASE_URL: http://127.0.0.1:8000
+          # The browser is served from http://127.0.0.1:3000, so the gateway
+          # must accept that exact Origin or CORS replies 403 before routing.
+          ALLOWED_ORIGINS: http://127.0.0.1:3000
       - name: Wait for API Gateway health
         run: |
           for attempt in $(seq 1 60); do
@@ -280,6 +283,9 @@ jobs:
           POSTGRES_SSLMODE: disable
           JWT_SECRET: ci-only-e2e-secret-with-adequate-length-2026
           AGENT_BASE_URL: http://127.0.0.1:8000
+          # The browser is served from http://127.0.0.1:3000, so the gateway
+          # must accept that exact Origin or CORS replies 403 before routing.
+          ALLOWED_ORIGINS: http://127.0.0.1:3000
       - name: Wait for Gateway health
         run: |
           for attempt in $(seq 1 60); do

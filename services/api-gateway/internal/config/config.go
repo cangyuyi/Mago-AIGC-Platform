@@ -97,7 +97,13 @@ func getEnvInt(key string, defaultVal int) int {
 	return defaultVal
 }
 
-const defaultAllowedOrigins = "http://localhost:3000,http://localhost"
+// Local development origins are trusted by default. Loopback IP variants are
+// included alongside the hostname forms because browsers treat
+// http://127.0.0.1:3000 and http://localhost:3000 as distinct origins: the
+// CORS middleware rejects any Origin not on this list with a 403 before the
+// request reaches a handler, so omitting them breaks every browser call when
+// the app is opened through 127.0.0.1 (the default in the CI E2E stack).
+const defaultAllowedOrigins = "http://localhost:3000,http://localhost,http://127.0.0.1:3000,http://127.0.0.1"
 
 func parseAllowedOrigins(raw string) []string {
 	origins := make([]string, 0, 2)

@@ -12,13 +12,25 @@
 - **goose 迁移在 CI 里必失败**：迁移 job 用 `docker run <goose-image> -dir ...` 调用，而镜像 entrypoint 并非 goose，报 `exec: "-dir": executable file not found`；且用了 goose 不存在的 `down -all`。现统一加 `--entrypoint goose`，回滚改用 `down-to 0`。
 - **jsdom 30 与 Node 20 不兼容**：CI 前端 job 跑 Node 20，而 `jsdom 30.1.1` 要求 `^22.22.2 || ^24.15.0 || >=26`，实例化即抛 `webidl.util.markAsUncloneable is not a function`。现降级到与 Node 18+ 兼容的 `jsdom ^26.1.0`。
 - **demo 模式提示词包 500（产品真实缺陷）**：静态 demo 没有后端，但 `fetchWithAuth` 只短路了 `/api/agent/run`，`/api/agent/prompt-pack` 与 `/api/agent/prompt-models` 会经 rewrite 打到不存在的后端并返回 500。现为这两个端点在浏览器侧补一套与 Python 后端**契约一致**的本地提示词引擎（`generated_by: prompt_engine_template`、`llm_configured: false`、每镜头×模型一条、seed 锁定、中英双语），并新增 4 条回归测试。
-- **Full-stack E2E 无法启动浏览器与注册不跳转**：CI 在仓库根用 `require("playwright-core")` 解析不到模块（该 job 无 working-directory），现改用 `createRequire(new URL("./apps/web/package.json", ...))` 从 app 目录解析；同时给「Start production Next.js server」步骤补上运行时 `API_GATEWAY_URL` / `AGENT_URL`——此前这两个变量只在 **build** 步骤设置，运行时 rewrite 回落到 `localhost`，注册请求打不到网关。
+- **Full-stack E2E 无法启动浏览器**：CI 在仓库根用 `require("playwright-core")` 解析不到模块（该 job 无 working-directory），现改用 `createRequire(new URL("./apps/web/package.json", ...))` 从 app 目录解析。
+
+### 修复 — 两项深层根因（第二轮，由 CI 日志 + 本机复现定位）
+
+- **数据库迁移在任何环境都从未跑通过（duplicate version 1）**：`services/api-gateway/migrations/` 采用了 golang-migrate 的拆分文件命名（`000001_init_schema.up.sql` + `.down.sql`），而本项目的迁移工具是 **goose**。goose 按文件名前导数字解析版本号，`...up.sql` 与 `...down.sql` 都算出 version 1，于是直接 `panic: goose: duplicate version 1 detected`。也就是说 `make migrate-up`、compose 启动、部署脚本里的 goose 迁移从未成功执行过一次。现把 6 组文件合并为 goose 原生**单文件**格式（`000001_init_schema.sql` … `000006_schema_alignment.sql`，每个文件内含 `-- +goose Up` 与 `-- +goose Down` 两段，SQL 内容忠实保留），并同步修正 `deploy/postgres/00-apply-migrations.sh`——它原本 glob `*.up.sql`，在合并后必然匹配为空。
+- **浏览器端所有带 Origin 的请求被网关 403，与业务逻辑无关**：`gin-contrib/cors` 对「带 `Origin` 但不在 `AllowOrigins` 白名单」的请求会**在路由前**直接 `AbortWithStatus(403)`。CI 用 `http://127.0.0.1:3000` 打开页面，而网关默认白名单只有 `http://localhost:3000,http://localhost`——浏览器把 `localhost` 与 `127.0.0.1` 视为**不同源**，因此 full-stack E2E 的注册请求全部 403，`waitForURL(/dashboard)` 30 秒超时。API smoke journey 用 Python 直连不带 `Origin`，所以一直是绿的，掩盖了这个问题。现把 `127.0.0.1` 的 host/IP 变体补进网关默认白名单、`.env.example`、`docker-compose.yml`，并给两个浏览器 job 显式设置 `ALLOWED_ORIGINS`。
+  - 复现证据：CI artifact `mago-fullstack-e2e` 的网关日志为 `POST /api/v1/auth/register status: 403 ... latency: 6.772µs`——6 微秒即返回，证明请求从未进入 handler。
+  - 本机复现：起 stub 网关 + standalone 前端，用真实 Chromium 打开 `http://127.0.0.1:3011`，注册成功并跳转 `/dashboard`。
+- `scripts/e2e_ui.mjs` 的注册步骤新增诊断捕获：等待 register 响应、打印 HTTP 状态与响应体、失败时输出登录页文案与截图。以后再出现同类问题，日志会直接给出状态码，而不是只剩一句 `Timeout`。
+- 说明：`API_GATEWAY_URL` / `AGENT_URL` 的**运行时** env 对 Next standalone 的 rewrite 无效——rewrite 在 `next build` 时已烘焙进 `routes-manifest.json`（本机实测：build 时指向 :8099，运行时仍只打 :8099）。CI 里保留这两行仅为文档用途，**真正修复 full-stack E2E 的是 CORS 白名单**。
 
 ### 验证 — 本轮
 - 前端：`vitest` **70 passed**（含新增 4 条 demo 提示词包回归）、`eslint` 通过、`tsc --noEmit` 通过、`next build` 通过。
 - Agent：`pytest` **99 passed**。
 - 网关：`go vet ./...` 与 `go build ./...` 通过（本机 macOS 缺 `LC_UUID`，`go test` 交由 CI 托底）。
+- 迁移文件结构校验：6 个文件版本 1–6 唯一、各含 1 个 Up / 1 个 Down、Up 在 Down 之前、body 非空，全部通过。
+- `deploy/postgres/00-apply-migrations.sh` `bash -n` 通过；`scripts/e2e_ui.mjs` `node --check` 通过；`.github/workflows/ci.yml` 可解析。
 - demo 真机 E2E：`NEXT_PUBLIC_DEMO_MODE=true` 生产构建 + standalone 起服 + `node scripts/e2e_ui.mjs --demo` **18 项全过、无 console error**。
+- 本机无法验证（无 Docker / goose / PostgreSQL）：真实 goose 迁移执行与 full-stack 容器级 E2E，**以 CI 结果为准**，不在本机结果中冒充通过。
 
 ### 修复 — 流式可靠性（本轮核心）
 

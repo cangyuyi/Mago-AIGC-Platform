@@ -48,7 +48,12 @@ func TestGetAllowedOriginsUsesDefaultsWhenUnsetOrBlank(t *testing.T) {
 	for _, raw := range []string{"", "   ", ",,,"} {
 		t.Run(raw, func(t *testing.T) {
 			t.Setenv("ALLOWED_ORIGINS", raw)
-			want := []string{"http://localhost:3000", "http://localhost"}
+			want := []string{
+				"http://localhost:3000",
+				"http://localhost",
+				"http://127.0.0.1:3000",
+				"http://127.0.0.1",
+			}
 			if got := getAllowedOrigins(); !reflect.DeepEqual(got, want) {
 				t.Fatalf("getAllowedOrigins() = %#v, want %#v", got, want)
 			}

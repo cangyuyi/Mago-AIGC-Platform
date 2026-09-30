@@ -141,9 +141,37 @@ async function main() {
       await page.getByPlaceholder("你的名字").fill("Mago Browser E2E");
       await page.locator('input[type="email"]').fill(email);
       await page.locator('input[type="password"]').fill("E2E-password-2026");
+      // Capture the register response so a failure is diagnosable from CI logs
+      // instead of surfacing only as an opaque waitForURL timeout.
+      const registerResponse = page.waitForResponse(
+        (response) => response.url().includes("/api/v1/auth/register"),
+        { timeout: 60000 },
+      );
       await page.getByRole("button", { name: "注册并进入" }).click();
-      await page.waitForURL((url) => url.pathname === "/dashboard", { timeout: 30000 });
-      check(page.url().includes("/dashboard"), "真实注册并登录成功");
+      let registerStatus = 0;
+      let registerBody = "";
+      try {
+        const response = await registerResponse;
+        registerStatus = response.status();
+        registerBody = await response.text().catch(() => "");
+      } catch (err) {
+        registerBody = "no response captured: " + (err?.message ?? err);
+      }
+      const navigated = await page
+        .waitForURL((url) => url.pathname === "/dashboard", { timeout: 30000 })
+        .then(() => true)
+        .catch(() => false);
+      check(
+        navigated,
+        "真实注册并登录成功",
+        "注册接口 HTTP " + registerStatus + "；响应 " + registerBody.slice(0, 300) + "；控制台 " + consoleErrors.slice(-3).join(" | "),
+      );
+      if (!navigated) {
+        const loginError = await page.locator("body").innerText().catch(() => "");
+        console.log("      \u001b[2m登录页可见文案：" + loginError.replace(/\n+/g, " ").slice(0, 300) + "\u001b[0m");
+        await shot(page, "01a-register-failed");
+        throw new Error("注册未跳转 dashboard（HTTP " + registerStatus + "）");
+      }
 
       await page.goto(`${base}/projects`, { waitUntil: "domcontentloaded", timeout: 60000 });
       await page.getByRole("button", { name: "新建项目" }).first().click();
