@@ -1,5 +1,4 @@
 -- +goose Up
-
 -- 04 板块：角色与风格管理扩展表
 
 -- 角色参考图片
@@ -84,3 +83,10 @@ CREATE TABLE IF NOT EXISTS brand_kits (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- +goose Down
+DROP TABLE IF EXISTS brand_kits CASCADE;
+DROP TABLE IF EXISTS prop_presets CASCADE;
+DROP TABLE IF EXISTS scene_presets CASCADE;
+DROP TABLE IF EXISTS style_combinations CASCADE;
+DROP TABLE IF EXISTS character_ref_images CASCADE;

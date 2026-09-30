@@ -1,5 +1,4 @@
 -- +goose Up
-
 -- 05 板块：提示词引擎
 CREATE TABLE IF NOT EXISTS prompt_packages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,3 +68,9 @@ CREATE TABLE IF NOT EXISTS model_configs (
     sort_order INT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- +goose Down
+DROP INDEX IF EXISTS idx_prompt_pkg_created_at;
+DROP TABLE IF EXISTS model_configs CASCADE;
+DROP TABLE IF EXISTS prompts CASCADE;
+DROP TABLE IF EXISTS prompt_packages CASCADE;

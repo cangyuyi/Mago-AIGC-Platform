@@ -1,5 +1,4 @@
 -- +goose Up
-
 -- Enable pgvector extension (for vector fields)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Note: pgvector extension can be installed via `CREATE EXTENSION vector;`
@@ -283,3 +282,17 @@ CREATE TABLE IF NOT EXISTS creative_sessions (
     deleted_at TIMESTAMPTZ
 );
 CREATE INDEX idx_creative_project ON creative_sessions(project_id);
+
+-- +goose Down
+DROP TABLE IF EXISTS creative_sessions CASCADE;
+DROP TABLE IF EXISTS viral_videos CASCADE;
+DROP TABLE IF EXISTS trend_topics CASCADE;
+DROP TABLE IF EXISTS style_presets CASCADE;
+DROP TABLE IF EXISTS characters CASCADE;
+DROP TABLE IF EXISTS storyboard_shots CASCADE;
+DROP TABLE IF EXISTS storyboards CASCADE;
+DROP TABLE IF EXISTS scripts CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
+DROP TABLE IF EXISTS memberships CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
