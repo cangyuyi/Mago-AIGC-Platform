@@ -1,5 +1,29 @@
 # 🧙 Mago Agent Platform — 项目交接文档
 
+## 🔄 2026-09-30 更新（续）：CI 修复 + 仓库卫生校验
+
+### 本轮完成
+- **修复过期 `uv.lock`（真实高危缺陷）**：上一轮给 `pyproject.toml` 增加 `checkpoint-{sqlite,postgres,redis}` 可选依赖时未同步锁文件。CI 中**所有** Python 相关 job（pytest / mypy / ruff / 两个 e2e）都以 `uv sync --frozen --extra dev` 起步，锁文件过期会让它们在装依赖阶段就整体失败——即整条 CI 会红，而非某个测试红。用 `uv lock --check` 复现到 `lockfile needs to be updated`。
+  - 重新生成 `uv.lock`：仅新增 checkpoint 后端及其传递依赖（aiosqlite / langgraph-checkpoint-{sqlite,postgres,redis} / psycopg* / redisvl / sqlite-vec / jsonpath-ng / ml-dtypes / python-ulid 等），无无关改动。
+  - 顺带修正 uv 报告的非法版本写法 `>= '2.7'` → `>= 2.7`。
+  - 现已验证 `uv lock --check` 通过、`uv sync --frozen --extra dev` 可解。
+- **新增 CI job `repo-hygiene`**（`.github/workflows/ci.yml`），守卫三类真实踩过的坑：
+  1. `uv lock --check` —— 锁文件与 `pyproject.toml` 漂移（即本次缺陷，从源头拦住）。
+  2. YAML 校验 —— workflow 文件 + 三个 compose 文件（compose 的 `!reset`/merge tag 注册为 no-op，仍做结构性校验）。
+  3. `bash -n` —— 全量校验 `scripts/` 与 `deploy/` 下的 shell 脚本语法。
+  - 该 job 不依赖 Docker/网络，秒级完成；失败时按文件精确定位。
+- 本地以真实退出码验证了新 job 的两个校验步骤（从 YAML 抽取 `run` 块直接跑 bash），均返回 0。
+
+### CI 现状（8 → 9 个 job）
+`frontend` / `browser-e2e` / `agent-e2e` / `api-e2e` / `go`(vet+race) / `python`(ruff+mypy+pytest) / `migrations` / `dockerfiles` / `repo-hygiene`。
+其中 Go 的 `go vet` 与 `go test -race` **已在 CI 中执行**——本机因 macOS 缺 `LC_UUID` 跑不了 Go 测试，可由 CI 托底验证，无需本地环境。
+
+### 验证结果
+- `uv lock --check` 通过；`uv sync --frozen --extra dev` 可解。
+- Agent：`pytest` **97 passed**、`ruff check` 通过。
+- 所有 CI/compose YAML 语法有效；`scripts/`+`deploy/` shell 脚本 `bash -n` 全通过。
+
+
 ## 🔄 2026-09-30 更新：真·token 级流式输出 + 前端门控测试
 
 ### 本轮完成
