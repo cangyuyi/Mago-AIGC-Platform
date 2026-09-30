@@ -1,5 +1,35 @@
 # 🧙 Mago Agent Platform — 项目交接文档
 
+## 🔄 2026-09-30 更新（终审）：流式可靠性修复 + 开源合规与仓库治理
+
+### 本轮完成（4 个 commit）
+
+**A. 流式可靠性（真实缺陷）**
+- **网关 SSE 丢流式**：`services/api-gateway/internal/handler/agent_proxy.go` 用 `io.Copy` 转发 upstream body，对 `text/event-stream` 没有逐块 flush → token 级流式经网关会被拷贝缓冲塌缩成一次性返回。现按 `Content-Type` 分流：SSE 逐块 `Write`+`Flush`；其他类型仍 `io.Copy`。新增 `TestAgentProxyFlushesSSEStream`（用自定义 `Flusher` 记录器断言中途确实 flush）。
+- **SSE 心跳从未闭环**：前端 `apps/web/src/lib/sse.ts` 的 `SSEParser` 早已支持忽略 `: keep-alive` 注释行，但服务端从不发送。Nginx `proxy_read_timeout 300s`（dev 60s）下，长时间无输出的节点会被切断。新增 `_with_heartbeat` 包装器（`services/agent/src/api/routes/agent.py`），空闲 15s 注入 `: keep-alive`；事件优先，不延迟不重排。补 2 个单测。
+
+**B. 开源合规**
+- **许可证冲突已修**：原 `LICENSE` 把标准 MIT 与「仅适用于文档/截图、不适用于核心服务端代码」的中文附加限制写在同一个文件，授权范围互相矛盾。现拆为纯标准 MIT 的 `LICENSE` + 说明品牌/商业边界的 `NOTICE`；README 底部同步改写；`docs/opensource-release.md` 的阻塞项 1 标记为已解决。
+
+**C. 仓库治理 / 安全工程**
+- `.github/workflows/security.yml`：gitleaks 密钥扫描 + pip-audit / pnpm audit / govulncheck 依赖审计（PR/push + 每周一定时）。
+- `.github/dependabot.yml`：npm / pip / gomod / actions / docker 五类依赖每周分组更新。
+- `.github/CODEOWNERS`、`.github/pull_request_template.md`。
+- README：新增产品实拍图墙（6 张真实界面）、Mermaid 架构图、CI/Security/语言徽章。
+
+### 验证结果
+- Agent：`ruff` 通过、`mypy src --ignore-missing-imports --check-untyped-defs` 通过（89 files）、`pytest` **99 passed**（新增 2 个心跳用例）。
+- 前端：本轮**未触碰任何 `apps/web` 代码**（`git diff --name-only` 确认），前端 66 passed 结论继续成立。
+- 新 CI/compose YAML 语法有效（yaml.safe_load 校验通过）。
+- **诚实标注**：本机无 Go 工具链，`agent_proxy.go` 改动手工核对格式（import 字母序、tab 缩进），Go 测试正确性由 CI 的 `go vet` / `go test -race` 托底，**未在本机声称通过**。
+
+### 新增 CI job
+`.github/workflows/security.yml` 两个 job：`secret-scan`（gitleaks）、`dependency-audit`（三语言依赖审计）。与既有 9 个 job 合计 11 个。
+
+### 安全提醒（保持）
+`~/.zsh_history` 存在明文 GitHub token（`ghp_puMD...`）。请到 GitHub Settings → Developer settings → Tokens **撤销**该 token，改用 `gh auth login` 或 SSH key。仓库本身已确认无密钥、无大文件。
+
+
 ## 🔄 2026-09-30 更新（续）：CI 修复 + 仓库卫生校验
 
 ### 本轮完成

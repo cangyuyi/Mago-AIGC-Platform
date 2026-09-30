@@ -6,6 +6,20 @@
 
 ## [未发布]
 
+### 修复 — 流式可靠性（本轮核心）
+
+- **网关 SSE 丢流式**：Go 网关 `AgentProxy` 此前用 `io.Copy` 转发 upstream body，对 `text/event-stream` 没有逐块 flush，token 级流式会被拷贝缓冲塌缩成一次性返回。现按 `Content-Type` 分流：SSE 逐块 `Write`+`Flush`，其他类型仍走 `io.Copy`；新增 `TestAgentProxyFlushesSSEStream` 断言中途确实 flush。
+- **SSE 心跳从未闭环**：前端 `SSEParser` 早已支持忽略 `: keep-alive` 注释行，但服务端从不发送；在 Nginx `proxy_read_timeout 300s` 下，长时间无输出的节点（LLM 冷启动、视频分析）会被断开。新增 `_with_heartbeat` 包装器，空闲 15s 注入注释行心跳，事件优先级不被打乱，并补两个单测。
+
+### 变更 — 开源合规与仓库治理
+
+- **修复许可证冲突**：原 `LICENSE` 把标准 MIT 与一条「仅适用于文档/截图、不适用于核心服务端代码」的中文附加限制写在同一个文件里，授权范围互相矛盾。现拆为纯标准 MIT 的 `LICENSE` + 说明品牌/商业边界的 `NOTICE`，README 表述同步一致。
+- 新增 `.github/workflows/security.yml`：gitleaks 密钥扫描 + pip-audit / pnpm audit / govulncheck 依赖审计（PR/push + 每周定时）。
+- 新增 `.github/dependabot.yml`：npm / pip / gomod / actions / docker 五类依赖每周分组更新。
+- 新增 `.github/CODEOWNERS`、`.github/pull_request_template.md`。
+- README 新增产品实拍图墙（6 张真实界面）与 Mermaid 架构图，补齐 CI / Security / 语言徽章。
+
+
 ### 新增 — 输出能力（本轮核心）
 
 - **提示词包引擎上线到工作台**：分镜生成后可直接勾选目标模型（Sora / Runway / 可灵 / 即梦 / Vidu / Pika / CogVideoX / 海螺 / 通义万相 / Midjourney / SDXL / DALL·E 3 / Flux / 混元 等 14 个），一键产出每个镜头的**正向提示词 + 负向提示词 + 可直接照抄的参数**（宽高比、时长、seed、`--ar`/`--no` 语法）。
