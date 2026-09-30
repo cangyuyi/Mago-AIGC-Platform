@@ -1,0 +1,73 @@
+# 依赖自动更新：把过期依赖这件事从「人工记得」变成「机器人提 PR」。
+# 分组更新减少 PR 噪音，每周一次避免高频打扰。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "frontend"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      frontend-minor:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: pip
+    directory: /services/agent
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "agent"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      agent-runtime:
+        patterns: ["*"]
+        update-types: ["patch"]
+
+  - package-ecosystem: gomod
+    directory: /services/api-gateway
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "api-gateway"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      go-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Shanghai
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "chore(ci)"
+
+  - package-ecosystem: docker
+    directory: /deploy/docker
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: Asia/Shanghai
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore(docker)"

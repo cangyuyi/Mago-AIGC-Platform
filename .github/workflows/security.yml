@@ -1,0 +1,79 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 每周一 03:17 UTC 跑一次，捕获新披露的 CVE / 新密钥泄漏
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Secret Scan - gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks 需要完整历史才能扫到历史提交里的泄漏
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-audit:
+    name: Dependency Audit - Python / Node / Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.x"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python dependency audit (pip-audit)
+        working-directory: services/agent
+        run: |
+          set -euo pipefail
+          uv export --frozen --no-emit-project --extra dev --format requirements-txt > /tmp/agent-requirements.txt
+          python -m pip install --quiet pip-audit
+          # 只审计锁定依赖；--strict 让「无法解析」也算失败，避免静默放过
+          pip-audit --strict --requirement /tmp/agent-requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Node production dependency audit
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          # 只对生产依赖要求 high/critical 无告警；dev 依赖告警不阻塞发布
+          pnpm audit --prod --audit-level=high
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: services/api-gateway/go.sum
+
+      - name: Go dependency audit (govulncheck)
+        working-directory: services/api-gateway
+        run: |
+          set -euo pipefail
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...

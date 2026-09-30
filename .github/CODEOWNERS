@@ -1,0 +1,14 @@
+# 默认代码所有者：所有 PR 需要仓库所有者的 review。
+# 按目录细化后，未来可把 App Router / Agent / 网关分别指派给不同领域负责人。
+*                       @cangyuyi
+
+# 基础设施与 CI 改动影响面最大，单独标注
+/.github/               @cangyuyi
+/docker-compose.yml     @cangyuyi
+/docker-compose.prod.yml @cangyuyi
+/deploy/                @cangyuyi
+
+# Agent 编排与提示词引擎是核心资产
+/services/agent/        @cangyuyi
+/apps/web/              @cangyuyi
+/services/api-gateway/  @cangyuyi

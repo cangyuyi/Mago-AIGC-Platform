@@ -1,9 +1,51 @@
 # 🧙 Mago Agent 创意平台
 
+[![CI](https://github.com/cangyuyi/Mago-AIGC-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/cangyuyi/Mago-AIGC-Platform/actions/workflows/ci.yml)
+[![Security](https://github.com/cangyuyi/Mago-AIGC-Platform/actions/workflows/security.yml/badge.svg)](https://github.com/cangyuyi/Mago-AIGC-Platform/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Node 20+](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](https://nodejs.org/)
+[![Go 1.22+](https://img.shields.io/badge/go-1.22%2B-00ADD8.svg)](https://go.dev/)
+
 > 已有Mago生图/生视频聚合平台的**上游AI创意大脑** — 模糊想法输入 → 专业提示词包输出，一键生成爆款视频。
 > 长耗时的视频分析和热点抓取由 Redis/ARQ 队列交给独立 `agent-worker` 执行。
 
 ---
+
+---
+
+## 🖼 产品实拍
+
+<table>
+  <tr>
+    <td width="50%"><img src="./screenshots/01-mago-chat-model-select.png" alt="多模型对话与 Agent 模式" /></td>
+    <td width="50%"><img src="./screenshots/03-mago-canvas-workflow.png" alt="画布工作流编排" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>多模型对话 · Agent 模式选择</sub></td>
+    <td align="center"><sub>可拖拽的画布工作流</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/04-mago-ecommerce-workstation.png" alt="AI 电商工作台" /></td>
+    <td width="50%"><img src="./screenshots/02-mago-image-generation.png" alt="文生图 / 图生图" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>电商场景工作台（换装/套图/详情页/爆款复刻）</sub></td>
+    <td align="center"><sub>图片生成与参数调优</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="./screenshots/05-mago-asset-library.png" alt="素材库" /></td>
+    <td width="50%"><img src="./screenshots/06-mago-task-history.png" alt="任务历史" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>统一素材库</sub></td>
+    <td align="center"><sub>任务历史与结果追溯</sub></td>
+  </tr>
+</table>
+
+> 上图为 Mago 线上平台（https://mago.fridai.top/）的实际界面。本仓库的 Agent 工作台是它的**上游创意大脑**：负责在真正调用生图/生视频之前，把模糊想法变成结构化的脚本与提示词包。
+
 
 ## ✨ 核心价值
 
@@ -15,6 +57,34 @@
 4. **角色&风格**：自定义角色人设+视觉风格，统一品牌调性
 5. **提示词引擎**：自动生成12个主流AIGC模型的专业提示词（Midjourney/SDXL/DALL-E 3/Sora/Runway/Pika/可灵/即梦/Vidu/CogVideoX/海螺/通义万相）
 6. **提示词包导出**：每个镜头的正向/负向提示词 + 可直接照抄的参数（宽高比、时长、seed、`--ar`/`--no` 语法），支持按镜头复制或整包导出 Markdown / CSV / JSON / 纯文本，粘贴到对应平台即可生成
+
+---
+
+## 🏗 架构一览
+
+```mermaid
+flowchart TB
+    U["创作者<br/>浏览器"] --> N["Nginx 反向代理<br/>:8080"]
+    N -->|"/"| W["Next.js 工作台<br/>apps/web :3000"]
+    N -->|"/api/"| G["Go API 网关<br/>Gin + GORM + JWT :8080"]
+    N -->|"/api/agent/"| A["Python Agent 服务<br/>FastAPI + LangGraph :8000"]
+
+    G --> PG[("PostgreSQL 16")]
+    G --> RD[("Redis 7")]
+    A --> PG
+    A --> RD
+    A --> MV[("Milvus 向量库")]
+    A --> S3[("MinIO 对象存储")]
+    A -.->|长任务| Q["ARQ Worker<br/>热点抓取 / 视频分析"]
+
+    A --> LLM["LiteLLM 网关<br/>OpenAI / Anthropic / DeepSeek ..."]
+    A --> OBS["可观测<br/>OTel + Langfuse"]
+    G --> OBS
+    OBS --> GRAF["Grafana / Prometheus / Loki / Tempo"]
+```
+
+三端分离：前端只与网关和 Agent 通信；网关负责认证与业务 CRUD；Agent 负责编排与推理。
+长耗时任务（热点抓取、视频分析）通过 Redis/ARQ 交给独立的 `agent-worker`，不阻塞 API 请求。
 
 ---
 
@@ -311,4 +381,11 @@ Agent 接口使用 `graph.astream(stream_mode=["updates","custom"])` 驱动工�
 
 ## License
 
-当前仓库的 `LICENSE` 文件同时包含标准 MIT 授权条款和额外的中文限制性说明，两者的授权范围存在冲突，因此在法律条款确认前，不应把本项目宣传为“无条件 MIT”。开源发布前请先按照 [开源发布清单](./docs/opensource-release.md) 选定并重写为一种明确的许可证。
+本项目基于 [MIT 许可证](./LICENSE) 开源，可自由使用、修改与商用。
+
+需要说明的是：MIT **只覆盖本仓库内的代码与文档**。Mago 线上服务（https://mago.fridai.top/）
+自身的运行实例、用户数据、计费通道与品牌标识不在本仓库中，因此也不在授权范围内；
+「Mago」名称与标识为商标性资产，MIT 不授予商标使用权。详见 [NOTICE](./NOTICE)。
+
+> 若你计划把本项目用于你自己的商业产品，只需保留版权声明与许可证全文即可，
+> 并使用你自己的产品名称与标识。
