@@ -1,5 +1,27 @@
 # 🧙 Mago Agent Platform — 项目交接文档
 
+## 🔄 2026-09-30 更新：CI 全红五项根因修复（真实跑挂后逐条定位）
+
+首次推送后 CI run 36688526091 有 5 个 job 红（Frontend / Browser E2E / Full-stack E2E / Migrations / Agent），
+本轮逐条定位并修复，全部有本地复现或可解释的机制：
+
+### 根因与修复
+1. **知识库 JSON 从未入库**（`Agent` job 挂）— `.gitignore` 的全局 `data/` 把 `services/agent/src/knowledge/data/*.json` 全挡住，全新 clone 无数据。补 negate 规则 + 提交 6 个文件。本地复现：修复前 `pytest` 的 ideation 用例失败；修复后 99 passed。
+2. **goose 迁移调用方式错**（`Migrations` job 挂）— 原 `docker run <image> -dir ...` 因镜像 entrypoint 非 goose 报 `exec: "-dir": ... not found`；`down -all` 也不是合法子命令。改 `--entrypoint goose` + `down-to 0`。本机无 Docker，**由 CI 验证**。
+3. **jsdom 30 vs Node 20**（`Frontend` job 挂）— CI 实跑 Node v20.20.2，`jsdom 30.1.1` engines 要求 `^22.22.2 || ^24.15.0 || >=26`，报 `webidl.util.markAsUncloneable is not a function`。降级 `jsdom ^26.1.0`（engines `>=18`）并更新 lockfile。
+4. **demo 模式提示词包 500**（`Browser E2E` 挂，产品真实 bug）— demo 无后端，但 `fetchWithAuth` 只短路 `/api/agent/run`，`prompt-pack`/`prompt-models` 经 rewrite 打到不存在的后端返回 500。新增浏览器侧本地提示词引擎（契约与 Python 后端一致）+ 4 条回归测试。本地 demo 真机 E2E：**18 项全过、无 console error**。
+5. **Full-stack E2E 两处**— (a) 仓库根 `require("playwright-core")` 解析不到模块（该 job 无 working-directory），改 `createRequire(new URL("./apps/web/package.json", ...))`；(b) 运行时 `API_GATEWAY_URL`/`AGENT_URL` 只在 build 步骤设过，运行时 rewrite 回落 `localhost` 导致注册不跳转，现补到 `Start production Next.js server` 步骤 env。
+
+### 验证结果（本轮，均为本机实跑）
+- 前端：`vitest` **70 passed**、`eslint` 通过、`tsc --noEmit` 通过、`next build` 通过。
+- Agent：`pytest` **99 passed**。
+- 网关：`go vet ./...` / `go build ./...` 通过；`go test` 因 macOS 缺 `LC_UUID` 跑不了，**以 CI 为准，不本地声称通过**。
+- demo 真机 E2E 18 项全过。
+- **诚实标注**：goose 迁移、Go race 测试、full-stack 真库 E2E 均依赖 CI（本机无 Docker/Postgres），修复正确性由下一次 CI run 托底，未本地声称通过。
+
+### 安全提醒（保持）
+`~/.zsh_history` 存在明文 GitHub token（`ghp_puMD...`）。请到 GitHub Settings → Developer settings → Tokens **撤销**该 token，改用 `gh auth login` 或 SSH key。仓库本身已确认无密钥、无大文件。
+
 ## 🔄 2026-09-30 更新（终审）：流式可靠性修复 + 开源合规与仓库治理
 
 ### 本轮完成（4 个 commit）

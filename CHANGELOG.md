@@ -6,6 +6,20 @@
 
 ## [未发布]
 
+### 修复 — CI 全红五项根因（本轮）
+
+- **知识库 JSON 从未入库（全新 clone 必挂）**：`.gitignore` 的全局 `data/` 规则把 `services/agent/src/knowledge/data/` 下的 6 个词表文件一并挡在版本库外，导致任何全新 clone / CI checkout 都缺数据、选题与提示词引擎直接失败。现补 negate 规则并提交这 6 个文件。
+- **goose 迁移在 CI 里必失败**：迁移 job 用 `docker run <goose-image> -dir ...` 调用，而镜像 entrypoint 并非 goose，报 `exec: "-dir": executable file not found`；且用了 goose 不存在的 `down -all`。现统一加 `--entrypoint goose`，回滚改用 `down-to 0`。
+- **jsdom 30 与 Node 20 不兼容**：CI 前端 job 跑 Node 20，而 `jsdom 30.1.1` 要求 `^22.22.2 || ^24.15.0 || >=26`，实例化即抛 `webidl.util.markAsUncloneable is not a function`。现降级到与 Node 18+ 兼容的 `jsdom ^26.1.0`。
+- **demo 模式提示词包 500（产品真实缺陷）**：静态 demo 没有后端，但 `fetchWithAuth` 只短路了 `/api/agent/run`，`/api/agent/prompt-pack` 与 `/api/agent/prompt-models` 会经 rewrite 打到不存在的后端并返回 500。现为这两个端点在浏览器侧补一套与 Python 后端**契约一致**的本地提示词引擎（`generated_by: prompt_engine_template`、`llm_configured: false`、每镜头×模型一条、seed 锁定、中英双语），并新增 4 条回归测试。
+- **Full-stack E2E 无法启动浏览器与注册不跳转**：CI 在仓库根用 `require("playwright-core")` 解析不到模块（该 job 无 working-directory），现改用 `createRequire(new URL("./apps/web/package.json", ...))` 从 app 目录解析；同时给「Start production Next.js server」步骤补上运行时 `API_GATEWAY_URL` / `AGENT_URL`——此前这两个变量只在 **build** 步骤设置，运行时 rewrite 回落到 `localhost`，注册请求打不到网关。
+
+### 验证 — 本轮
+- 前端：`vitest` **70 passed**（含新增 4 条 demo 提示词包回归）、`eslint` 通过、`tsc --noEmit` 通过、`next build` 通过。
+- Agent：`pytest` **99 passed**。
+- 网关：`go vet ./...` 与 `go build ./...` 通过（本机 macOS 缺 `LC_UUID`，`go test` 交由 CI 托底）。
+- demo 真机 E2E：`NEXT_PUBLIC_DEMO_MODE=true` 生产构建 + standalone 起服 + `node scripts/e2e_ui.mjs --demo` **18 项全过、无 console error**。
+
 ### 修复 — 流式可靠性（本轮核心）
 
 - **网关 SSE 丢流式**：Go 网关 `AgentProxy` 此前用 `io.Copy` 转发 upstream body，对 `text/event-stream` 没有逐块 flush，token 级流式会被拷贝缓冲塌缩成一次性返回。现按 `Content-Type` 分流：SSE 逐块 `Write`+`Flush`，其他类型仍走 `io.Copy`；新增 `TestAgentProxyFlushesSSEStream` 断言中途确实 flush。

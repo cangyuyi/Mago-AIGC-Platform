@@ -119,6 +119,11 @@ function requestHeaders(options: RequestInit, token: string | null): Headers {
 /** Fetch an API response, retrying once with a refreshed access token after a 401. */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
   if (isDemoMode() && url === "/api/agent/run") return createDemoAgentResponse(options);
+  // Demo mode has no backend: the prompt engine is a deterministic template
+  // layer, so we answer the two prompt-engine endpoints locally instead of
+  // letting the request fall through to the Next.js rewrite and 500.
+  if (isDemoMode() && url === "/api/agent/prompt-models") return createDemoPromptModelsResponse();
+  if (isDemoMode() && url === "/api/agent/prompt-pack") return createDemoPromptPackResponse(options);
 
   let token = getToken();
   let response = await fetch(url, { ...options, headers: requestHeaders(options, token) });
@@ -387,6 +392,159 @@ function getMockData<T>(url: string, options: RequestInit): T {
   if (url.includes("/me")) return { id: "demo", email: "test@example.com", name: "演示用户", role: "user" } as T;
   return {} as T;
 }
+
+// ---------------------------------------------------------------------------
+// Demo-mode prompt engine
+//
+// The real engine lives in services/agent (Python) and turns a storyboard into
+// per-model prompts. Demo mode ships no backend, so we reproduce the same
+// response contract with a deterministic template: same JSON shape, same
+// user-visible guarantees (one prompt per shot × model, a locked seed per
+// shot, an aspect ratio, and model-appropriate bilingual wording). It is
+// intentionally labelled as a demo elsewhere via `isDemoMode()`.
+// ---------------------------------------------------------------------------
+
+const DEMO_PROMPT_MODELS = [
+  { model_id: "kling-v3", display_name: "可灵 2.1 Master", vendor: "Kuaishou", prompt_type: "video", language: "zh", supports_negative: true, aspect_ratios: ["9:16", "16:9", "1:1"] },
+  { model_id: "midjourney-v7", display_name: "Midjourney V7", vendor: "Midjourney", prompt_type: "image", language: "en", supports_negative: false, aspect_ratios: ["9:16", "16:9", "1:1", "4:3"] },
+  { model_id: "sora-turbo", display_name: "Sora Turbo", vendor: "OpenAI", prompt_type: "video", language: "en", supports_negative: false, aspect_ratios: ["9:16", "16:9"] },
+] as const;
+
+function jsonResponse(payload: unknown): Response {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/** Mirror of the agent's GET /prompt-models, served locally in demo mode. */
+function createDemoPromptModelsResponse(): Response {
+  return jsonResponse({ models: DEMO_PROMPT_MODELS });
+}
+
+interface DemoStoryboardShot {
+  index?: number;
+  visual_description?: string;
+  subject_description?: string;
+  scene_description?: string;
+  shot_size?: string;
+  camera_angle?: string;
+  camera_movement?: string;
+  lighting?: string;
+  color_tone?: string;
+  duration_sec?: number;
+}
+
+function shotVisual(shot: DemoStoryboardShot): string {
+  const visual = String(shot.visual_description || "").trim();
+  if (visual) return visual;
+  const subject = String(shot.subject_description || "").trim();
+  const scene = String(shot.scene_description || "").trim();
+  return [subject, scene].filter(Boolean).join("，") || "真实场景主体";
+}
+
+/** Build a per-model prompt from a shot; deterministic so tests stay stable. */
+function demoPromptFor(
+  shot: DemoStoryboardShot,
+  shotIndex: number,
+  model: (typeof DEMO_PROMPT_MODELS)[number],
+  aspect: string,
+  seed: number,
+): Record<string, unknown> {
+  const visual = shotVisual(shot);
+  const shotSize = String(shot.shot_size || "").trim();
+  const movement = String(shot.camera_movement || "").trim();
+  const lighting = String(shot.lighting || "").trim();
+  const tone = String(shot.color_tone || "").trim();
+  const composition = ["主体居中", shotSize, movement].filter(Boolean).join("，");
+  const atmosphere = [lighting, tone].filter(Boolean).join("、");
+
+  const positive =
+    model.language === "zh"
+      ? `竖屏短视频，${visual}。构图：${composition}${atmosphere ? `；光线与色调：${atmosphere}` : ""}。真实质感，细节清晰，画面稳定。`
+      : `vertical short-form video, ${visual}. composition: ${composition}${atmosphere ? `; lighting and tone: ${atmosphere}` : ""}. photorealistic, crisp details, stable camera, cinematic quality`;
+
+  const negative =
+    model.supports_negative
+      ? model.language === "zh"
+        ? "模糊，低画质，变形的手，多余手指，文字水印，过度锐化，画面抖动"
+        : "blurry, low quality, deformed hands, extra fingers, text watermark, oversharpened, shaky footage"
+      : "";
+
+  const parameters: Record<string, unknown> = {
+    aspect_ratio: aspect,
+    seed,
+    ...(shotIndex ? { shot_index: shotIndex } : {}),
+  };
+  if (shot.duration_sec) parameters.duration = shot.duration_sec;
+
+  return {
+    model_id: model.model_id,
+    model_name: model.display_name,
+    prompt_type: model.prompt_type,
+    positive_prompt: positive,
+    negative_prompt: negative,
+    parameters,
+    seed_value: seed,
+    language: model.language,
+    aspect_ratio: aspect,
+    duration_sec: shot.duration_sec ?? null,
+    warnings: [],
+    quality_notes: "演示模式：由本地模板生成，未调用任何模型额度。",
+    shot_index: shotIndex,
+    package_id: "",
+  };
+}
+
+/** Mirror of the agent's POST /prompt-pack, served locally in demo mode. */
+function createDemoPromptPackResponse(options: RequestInit): Response {
+  const payload = demoAgentPayload(options);
+  const storyboard = (payload.storyboard ?? {}) as { shots?: DemoStoryboardShot[]; aspect_ratio?: string; id?: string };
+  const shots = Array.isArray(storyboard.shots) ? storyboard.shots : [];
+  if (!shots.length) {
+    return new Response(JSON.stringify({ detail: "分镜表为空，请先生成分镜表" }), {
+      status: 422,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const aspect = String(storyboard.aspect_ratio || "9:16");
+  const requested = Array.isArray(payload.target_models) ? (payload.target_models as string[]) : [];
+  const targetModels = requested.length
+    ? DEMO_PROMPT_MODELS.filter((model) => requested.includes(model.model_id))
+    : DEMO_PROMPT_MODELS.slice(0, 3);
+  const models = targetModels.length ? targetModels : DEMO_PROMPT_MODELS.slice(0, 3);
+
+  const packageId = `demo-package-${Date.now()}`;
+  const baseSeed = 42000;
+  const prompts: Array<Record<string, unknown>> = [];
+  for (const [position, shot] of shots.entries()) {
+    const shotIndex = typeof shot.index === "number" ? shot.index : position + 1;
+    for (const model of models) {
+      const item = demoPromptFor(shot, shotIndex, model, aspect, baseSeed + shotIndex * 7);
+      item.package_id = packageId;
+      (item.parameters as Record<string, unknown>).seed = baseSeed + shotIndex * 7;
+      prompts.push(item);
+    }
+  }
+
+  const script = (payload.script ?? null) as { title?: string } | null;
+  const pkg = {
+    id: packageId,
+    storyboard_id: String(storyboard.id || ""),
+    name: script?.title ? `${script.title} · 提示词包` : "演示提示词包",
+    total_shots: shots.length,
+    selected_models: models.map((model) => model.model_id),
+    aspect_ratio: aspect,
+    prompts,
+  };
+  return jsonResponse({
+    package: pkg,
+    generated_by: "prompt_engine_template",
+    available_models: models.map((model) => model.model_id),
+    llm_configured: false,
+  });
+}
+
 
 function demoEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;

@@ -203,6 +203,8 @@ jobs:
         env:
           HOSTNAME: 127.0.0.1
           PORT: "3000"
+          API_GATEWAY_URL: http://127.0.0.1:8080
+          AGENT_URL: http://127.0.0.1:8000
       - name: Wait for Next.js
         run: |
           for attempt in $(seq 1 60); do
@@ -222,7 +224,7 @@ jobs:
           --out /tmp/mago-smoke-pack.md
       - name: Run full creator journey in Chromium with real auth and project APIs
         run: |
-          export CHROME_PATH="$(node -e 'process.stdout.write(require("playwright-core").chromium.executablePath())')"
+          export CHROME_PATH="$(node -e 'const{createRequire}=require("node:module");const req=createRequire(new URL("./apps/web/package.json","file://"+process.cwd()+"/"));process.stdout.write(req("playwright-core").chromium.executablePath())')"
           node scripts/e2e_ui.mjs --live --base http://127.0.0.1:3000 --shots /tmp/mago-live-e2e
       - name: Upload full-stack browser evidence
         if: always()
@@ -377,7 +379,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply all migrations
         run: |
-          docker run --rm --network host \
+          docker run --rm --network host --entrypoint goose \
             -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
             "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" up
       - name: Seed JSON arrays before downgrade
@@ -397,7 +399,7 @@ jobs:
           SQL
       - name: Roll back the schema-alignment migration and verify data
         run: |
-          docker run --rm --network host \
+          docker run --rm --network host --entrypoint goose \
             -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
             "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" down
           rollback_check=$(docker run --rm --network host postgres:16-alpine \
@@ -409,7 +411,7 @@ jobs:
           test "$rollback_check" = "t"
       - name: Re-apply alignment and roll back all migrations
         run: |
-          docker run --rm --network host \
+          docker run --rm --network host --entrypoint goose \
             -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
             "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" up
           reapply_check=$(docker run --rm --network host postgres:16-alpine \
@@ -419,10 +421,10 @@ jobs:
                 AND
                 (SELECT aspect_ratios = '["1:1", "16:9"]'::jsonb FROM model_configs WHERE model_id = 'migration-rollback-check');")
           test "$reapply_check" = "t"
-          docker run --rm --network host \
+          docker run --rm --network host --entrypoint goose \
             -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
-            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" down -all
-          docker run --rm --network host \
+            "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" down-to 0
+          docker run --rm --network host --entrypoint goose \
             -v "$PWD/services/api-gateway/migrations:/migrations:ro" \
             "$GOOSE_IMAGE" -dir /migrations postgres "$DB_URL" up
 
