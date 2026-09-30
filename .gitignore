@@ -70,10 +70,12 @@ go.work.sum
 *.tfstate.backup
 .terraform/
 
-# Media uploads
+# Media uploads / runtime artifacts (repo-root only; keep source-tree data such as
+# services/agent/src/knowledge/data tracked).
 uploads/
-tmp/
 data/
+!services/agent/src/knowledge/data/
+!services/agent/src/knowledge/data/**
 
 # UV
 # Keep uv.lock tracked for reproducible Agent builds.

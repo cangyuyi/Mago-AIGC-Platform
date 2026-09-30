@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "description": "节奏模式库，10+种",
+  "patterns": [
+    {"id": "rhythm_fast_cut", "name": "快切节奏", "avg_shot_duration": 1.2, "shot_count_per_10s": 8, "bpm_range": [120, 160], "description": "<1.5s/镜，高能量快切，适合变装/卡点/震撼开场", "best_for": ["变装","卡点","快剪"]},
+    {"id": "rhythm_medium", "name": "中速叙事", "avg_shot_duration": 2.5, "shot_count_per_10s": 4, "bpm_range": [80, 120], "description": "2-3s/镜，标准叙事节奏，口播/教程/日常", "best_for": ["口播","教程","日常"]},
+    {"id": "rhythm_slow_cinematic", "name": "慢镜头电影感", "avg_shot_duration": 4.0, "shot_count_per_10s": 2, "bpm_range": [60, 90], "description": ">3.5s/镜，电影感慢镜头，风景/情感/大片", "best_for": ["风景","情感","大片"]},
+    {"id": "rhythm_slow_fast_mix", "name": "慢快混合", "avg_shot_duration": 2.0, "shot_count_per_10s": 5, "bpm_range": [90, 130], "description": "慢镜头铺垫→快切高潮，变装/变身/展示", "best_for": ["变装","变身","展示"]},
+    {"id": "rhythm_3s_hook", "name": "3秒钩子强节奏", "avg_shot_duration": 0.8, "shot_count_per_10s": 12, "bpm_range": [130, 180], "description": "前3秒极速快切抓住注意力，之后转正常节奏", "best_for": ["通用开场","钩子"]},
+    {"id": "rhythm_breathing", "name": "呼吸式节奏", "avg_shot_duration": 2.2, "shot_count_per_10s": 5, "bpm_range": [80, 120], "description": "快-慢-快-慢交替张弛有度，vlog/情感/故事", "best_for": ["vlog","情感","故事"]},
+    {"id": "rhythm_bgm_driven", "name": "BGM驱动型", "avg_shot_duration": 1.5, "shot_count_per_10s": 7, "bpm_range": "match_bgm", "description": "镜头切换严格卡BGM节拍点", "best_for": ["卡点","舞蹈","音乐"]},
+    {"id": "rhythm_silence_impact", "name": "静默冲击", "avg_shot_duration": 3.5, "shot_count_per_10s": 3, "bpm_range": [0, 60], "description": "长镜头+突然静默+文字点题，情感/治愈/震撼", "best_for": ["情感","治愈","震撼"]},
+    {"id": "rhythm_single_take", "name": "一镜到底", "avg_shot_duration": 30.0, "shot_count_per_10s": 0.3, "bpm_range": [0, 100], "description": "单镜头不切，沉浸感/真实感，ASMR/沉浸式/教程", "best_for": ["ASMR","沉浸式","教程"]},
+    {"id": "rhythm_accelerate", "name": "加速推进", "avg_shot_duration": "decreasing", "shot_count_per_10s": "increasing", "bpm_range": [80, 160], "description": "镜头时长递减BPM递增，推向高潮，倒计时/挑战/盘点", "best_for": ["倒计时","挑战","盘点"]},
+    {"id": "rhythm_decelerate", "name": "减速收尾", "avg_shot_duration": "increasing", "shot_count_per_10s": "decreasing", "bpm_range": [120, 60], "description": "镜头时长递增节奏放缓，收尾/CTA/总结", "best_for": ["收尾","总结","CTA"]}
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "version": "1.0.0",
+  "description": "短视频钩子套路库，10大类共100+种钩子",
+  "categories": [
+    {
+      "name": "提问类",
+      "type": "question",
+      "templates": [
+        {"id": "hook_q1", "name": "灵魂拷问", "template": "你有没有想过，{问题}？", "example": "你有没有想过，为什么你涂口红总是显老？", "best_for": ["美妆","情感","职场"], "duration_range": [15,60]},
+        {"id": "hook_q2", "name": "反问式", "template": "谁说{常识认知}？今天告诉你一个秘密……", "example": "谁说便宜没好货？这5样10块钱的东西比大牌还好用", "best_for": ["种草","测评","干货"], "duration_range": [20,60]},
+        {"id": "hook_q3", "name": "二选一", "template": "{选项A}还是{选项B}？90%的人都选错了", "example": "口红选哑光还是镜面？90%的人都选错了", "best_for": ["美妆","时尚","生活"], "duration_range": [15,45]},
+        {"id": "hook_q4", "name": "数字提问", "template": "{N}个{事物}，你知道几个？", "example": "3个iPhone隐藏功能，你知道几个？", "best_for": ["数码","干货","知识"], "duration_range": [15,60]},
+        {"id": "hook_q5", "name": "追问式", "template": "为什么{现象}？答案出乎意料", "example": "为什么超市牛奶永远摆在最里面？答案出乎意料", "best_for": ["知识","科普","生活"], "duration_range": [20,60]},
+        {"id": "hook_q6", "name": "你猜式", "template": "猜一下{事物}要多少钱？答案惊掉下巴", "example": "猜一下这桌菜要多少钱？答案惊掉下巴", "best_for": ["美食","探店","开箱"], "duration_range": [15,45]},
+        {"id": "hook_q7", "name": "你知道吗", "template": "你知道{领域}最{形容词}的是什么吗？", "example": "你知道全网最火的口红色号是什么吗？", "best_for": ["美妆","时尚","种草"], "duration_range": [15,45]},
+        {"id": "hook_q8", "name": "怎么办式", "template": "{痛点场景}怎么办？{N}招教你解决", "example": "熬夜脸黄怎么办？3招教你急救", "best_for": ["美妆","健康","职场"], "duration_range": [20,60]},
+        {"id": "hook_q9", "name": "敢不敢式", "template": "敢不敢{挑战}？最后一个你绝对做不到", "example": "敢不敢试试这5种零食搭配？最后一个你绝对做不到", "best_for": ["美食","挑战","娱乐"], "duration_range": [15,30]},
+        {"id": "hook_q10", "name": "有没有人式", "template": "有没有人和我一样{行为}？", "example": "有没有人和我一样，涂口红永远涂出界？", "best_for": ["美妆","情感","共鸣"], "duration_range": [15,45]}
+      ]
+    },
+    {
+      "name": "震惊类",
+      "type": "shock",
+      "templates": [
+        {"id": "hook_s1", "name": "反常识", "template": "{常识认知}，其实是错的！", "example": "饭后散步助消化？其实是错的！", "best_for": ["知识","健康","科普"], "duration_range": [20,60]},
+        {"id": "hook_s2", "name": "数据冲击", "template": "{百分比}的人不知道{事实}", "example": "90%的人不知道，手机这个功能居然能救命", "best_for": ["知识","数码","生活"], "duration_range": [15,45]},
+        {"id": "hook_s3", "name": "身份反差", "template": "从{身份A}到{身份B}，{他/她}只用了{N}天", "example": "从月薪3000到年入百万，她只用了90天", "best_for": ["励志","职场","创业"], "duration_range": [30,180]},
+        {"id": "hook_s4", "name": "结果剧透", "template": "最后{秒数}秒，全场都哭了", "example": "最后5秒，全场都哭了", "best_for": ["情感","剧情","表演"], "duration_range": [30,180]},
+        {"id": "hook_s5", "name": "极端对比", "template": "{事物A}只要{价格A}，{事物B}却要{价格B}，差距在哪？", "example": "9.9口红和999口红差距在哪？看完你就懂了", "best_for": ["测评","种草","美妆"], "duration_range": [30,120]},
+        {"id": "hook_s6", "name": "后悔式", "template": "我后悔没有早知道{事实}", "example": "我后悔没有早知道这个化妆技巧", "best_for": ["美妆","干货","生活"], "duration_range": [20,60]},
+        {"id": "hook_s7", "name": "警告式", "template": "注意！{事物}正在{危害}，{N}个信号你中了几个", "example": "注意！你的护肤方式正在毁脸，5个信号你中了几个", "best_for": ["美妆","健康","生活"], "duration_range": [20,60]},
+        {"id": "hook_s8", "name": "真相揭露", "template": "{行业}不会告诉你的{N}个秘密", "example": "化妆品专柜不会告诉你的10个秘密", "best_for": ["美妆","揭露","知识"], "duration_range": [30,120]},
+        {"id": "hook_s9", "name": "惊人发现", "template": "我发现了一个{形容词}的秘密，{结果}", "example": "我发现了一个变美的秘密，坚持一周皮肤白到发光", "best_for": ["美妆","种草","生活"], "duration_range": [15,45]},
+        {"id": "hook_s10", "name": "天价对比", "template": "{金额}元买的{事物}，成本居然只要{成本}？", "example": "1000块买的精华，成本居然只要3块？", "best_for": ["揭露","测评","种草"], "duration_range": [20,60]}
+      ]
+    },
+    {
+      "name": "好奇类",
+      "type": "curiosity",
+      "templates": [
+        {"id": "hook_c1", "name": "悬念预告", "template": "看到最后，{惊喜结果}", "example": "看到最后，我保证你会尖叫", "best_for": ["剧情","开箱","挑战"], "duration_range": [15,60]},
+        {"id": "hook_c2", "name": "秘密揭露", "template": "偷偷告诉你一个{形容词}的秘密，{描述}", "example": "偷偷告诉你一个化妆师的秘密，画眼线再也不会手抖", "best_for": ["美妆","技巧","干货"], "duration_range": [15,45]},
+        {"id": "hook_c3", "name": "猜不到结局", "template": "开头{描述}，结尾你绝对猜不到", "example": "开头以为是搞笑视频，结尾你绝对猜不到", "best_for": ["剧情","反转","情感"], "duration_range": [30,120]},
+        {"id": "hook_c4", "name": "信息差", "template": "{人群}都在用的{方法}，{另一人群}还不知道", "example": "明星都在用的瘦脸方法，普通人还不知道", "best_for": ["美妆","时尚","种草"], "duration_range": [15,45]},
+        {"id": "hook_c5", "name": "神秘物品", "template": "这个{形容词}的小东西，居然能{惊人效果}", "example": "这个5块钱的小东西，居然能解决所有妆容问题", "best_for": ["种草","好物","美妆"], "duration_range": [15,45]},
+        {"id": "hook_c6", "name": "禁术揭秘", "template": "{职业}打死不说的技巧，今天免费教你", "example": "化妆师打死不说的修容技巧，今天免费教你", "best_for": ["美妆","技巧","干货"], "duration_range": [20,60]},
+        {"id": "hook_c7", "name": "隐藏功能", "template": "{物品}你只用了{百分比}，剩下的功能太{形容词}", "example": "iPhone你只用了10%，剩下的功能太强大了", "best_for": ["数码","知识","干货"], "duration_range": [20,60]},
+        {"id": "hook_c8", "name": "挑战极限", "template": "挑战{极端条件}{做某事}，结果……", "example": "挑战用10块钱化全妆，结果……", "best_for": ["美妆","挑战","种草"], "duration_range": [30,60]},
+        {"id": "hook_c9", "name": "反常现象", "template": "为什么{反常现象}？原因竟然是……", "example": "为什么日本女生皮肤那么好？原因竟然是这个", "best_for": ["美妆","知识","生活"], "duration_range": [20,60]},
+        {"id": "hook_c10", "name": "未公开", "template": "{品牌/平台}内部资料流出，{内容概述}", "example": "某大牌专柜内部资料流出，这5样东西千万别买", "best_for": ["揭露","种草","测评"], "duration_range": [20,60]}
+      ]
+    },
+    {
+      "name": "数字类",
+      "type": "number",
+      "templates": [
+        {"id": "hook_n1", "name": "N个技巧", "template": "{N}个{领域}技巧，第{M}个最{形容词}", "example": "5个化妆技巧，第3个最实用", "best_for": ["干货","美妆","技巧"], "duration_range": [20,60]},
+        {"id": "hook_n2", "name": "百分比承诺", "template": "坚持{N}天，{效果}，{百分比}的人有效", "example": "坚持7天，皮肤变白一个度，95%的人有效", "best_for": ["美妆","健康","减肥"], "duration_range": [20,60]},
+        {"id": "hook_n3", "name": "时间压缩", "template": "{N}秒/分钟教你{技能}", "example": "30秒教你画好眼线", "best_for": ["美妆","技巧","教程"], "duration_range": [15,45]},
+        {"id": "hook_n4", "name": "价格锚定", "template": "{价格}元搞定{高价事物}效果", "example": "10块钱搞定1000块的护肤效果", "best_for": ["种草","平价","美妆"], "duration_range": [15,45]},
+        {"id": "hook_n5", "name": "排名式", "template": "{领域}Top{N}，第{M}个你肯定没见过", "example": "全网口红Top10，第7个你肯定没见过", "best_for": ["种草","排名","美妆"], "duration_range": [30,120]},
+        {"id": "hook_n6", "name": "倒计时", "template": "倒计时{N}天/秒，{事件描述}", "example": "倒计时3天，这个好物就要涨价了", "best_for": ["种草","促销","提醒"], "duration_range": [15,30]},
+        {"id": "hook_n7", "name": "年龄数字", "template": "{年龄}岁{做某事}，看起来像{年轻年龄}岁", "example": "40岁妈妈这样护肤，看起来像20岁", "best_for": ["美妆","护肤","励志"], "duration_range": [20,60]},
+        {"id": "hook_n8", "name": "数量承诺", "template": "只需要{N}样东西，就能{想要效果}", "example": "只需要3样东西，就能画出完美底妆", "best_for": ["美妆","教程","干货"], "duration_range": [15,45]},
+        {"id": "hook_n9", "name": "历史最低", "template": "历史最低价！{产品}只要{价格}，错过等一年", "example": "历史最低价！大牌口红只要9块9，错过等一年", "best_for": ["种草","促销","开箱"], "duration_range": [15,30]},
+        {"id": "hook_n10", "name": "步骤式", "template": "第{N}步{操作}，{结果}", "example": "第3步最关键，画对了脸小一圈", "best_for": ["教程","美妆","干货"], "duration_range": [20,60]}
+      ]
+    },
+    {
+      "name": "痛点类",
+      "type": "pain_point",
+      "templates": [
+        {"id": "hook_p1", "name": "扎心一问", "template": "{痛点场景}，是不是你？", "example": "早上化的妆下午就脱成狗，是不是你？", "best_for": ["美妆","情感","生活"], "duration_range": [15,45]},
+        {"id": "hook_p2", "name": "共鸣困境", "template": "有没有人跟我一样{困境描述}？", "example": "有没有人跟我一样，买了一堆口红从来不用？", "best_for": ["共鸣","美妆","生活"], "duration_range": [15,45]},
+        {"id": "hook_p3", "name": "错误纠正", "template": "你还在{错误做法}？难怪{负面结果}", "example": "你还在这样涂粉底液？难怪卡粉斑驳", "best_for": ["美妆","教程","纠错"], "duration_range": [20,60]},
+        {"id": "hook_p4", "name": "避坑指南", "template": "千万不要{错误行为}，我已经替你踩过坑了", "example": "千万不要买这个色号，黄皮涂上显黑10度", "best_for": ["避坑","种草","测评"], "duration_range": [20,60]},
+        {"id": "hook_p5", "name": "痛点直击", "template": "每次{痛点场景}都{负面结果}？一招解决", "example": "每次画眼线都手抖？一招解决", "best_for": ["美妆","教程","技巧"], "duration_range": [15,45]},
+        {"id": "hook_p6", "name": "坦白局", "template": "说实话，{领域}这些坑我全踩过", "example": "说实话，化妆这些坑我全踩过，今天全告诉你", "best_for": ["美妆","避坑","干货"], "duration_range": [30,120]},
+        {"id": "hook_p7", "name": "焦虑唤起", "template": "{年龄/身份}还不会{技能}？你已经落后了", "example": "25岁还不会画眉毛？你已经落后了", "best_for": ["美妆","教程","焦虑"], "duration_range": [15,45]},
+        {"id": "hook_p8", "name": "对比伤害", "template": "别人{好结果}，你却{坏结果}，差距在这", "example": "别人化妆像换头，你却越化越丑，差距在这", "best_for": ["美妆","教程","对比"], "duration_range": [20,60]},
+        {"id": "hook_p9", "name": "紧急补救", "template": "紧急！{突发状况}怎么办？{N}分钟搞定", "example": "紧急！约会前爆痘怎么办？5分钟搞定", "best_for": ["美妆","急救","教程"], "duration_range": [15,45]},
+        {"id": "hook_p10", "name": "踩雷分享", "template": "花了{金额}块买的教训，{踩雷内容}", "example": "花了5000块买的教训，这些网红产品千万别买", "best_for": ["避坑","测评","种草"], "duration_range": [30,120]}
+      ]
+    },
+    {
+      "name": "故事类",
+      "type": "story",
+      "templates": [
+        {"id": "hook_st1", "name": "个人经历", "template": "我{经历描述}，结果{意外结果}", "example": "我用了这个方法30天，皮肤变化惊到我了", "best_for": ["美妆","减肥","励志"], "duration_range": [30,180]},
+        {"id": "hook_st2", "name": "转折故事", "template": "原本{状态A}，直到{转折点}，一切都变了", "example": "原本我皮肤差到不敢出门，直到遇到这个方法，一切都变了", "best_for": ["励志","美妆","情感"], "duration_range": [30,180]},
+        {"id": "hook_st3", "name": "奇遇故事", "template": "那天{奇遇场景}，没想到{结果}", "example": "那天在专柜遇到一个化妆师，没想到她告诉我的秘密改变了我", "best_for": ["美妆","故事","种草"], "duration_range": [30,120]},
+        {"id": "hook_st4", "name": "真情流露", "template": "{真情告白内容}", "example": "做美妆博主3年，今天想跟大家说句掏心窝子的话", "best_for": ["情感","真诚","共鸣"], "duration_range": [30,180]},
+        {"id": "hook_st5", "name": "用户故事", "template": "粉丝给我投稿说{故事内容}，我决定帮她", "example": "粉丝给我投稿说不会化妆，我决定帮她改造", "best_for": ["美妆","改造","情感"], "duration_range": [60,300]},
+        {"id": "hook_st6", "name": "失败故事", "template": "我{失败经历}，损失{代价}，总结出{N}个教训", "example": "我创业失败亏了50万，总结出3个血的教训", "best_for": ["励志","职场","经验"], "duration_range": [60,180]},
+        {"id": "hook_st7", "name": "反差开头", "template": "你以为{表象}，其实{真相}", "example": "你以为她天生丽质，其实她只是用了这个技巧", "best_for": ["美妆","揭秘","种草"], "duration_range": [20,60]},
+        {"id": "hook_st8", "name": "回忆杀", "template": "还记得{共同记忆}吗？{现在对比}", "example": "还记得小时候偷用妈妈口红吗？现在你已经……", "best_for": ["情感","回忆","共鸣"], "duration_range": [20,60]},
+        {"id": "hook_st9", "name": "悬念事件", "template": "昨天发生了一件{形容词}的事……", "example": "昨天发生了一件不可思议的事……", "best_for": ["故事","剧情","vlog"], "duration_range": [30,180]},
+        {"id": "hook_st10", "name": "蜕变记录", "template": "{N}天{挑战描述}，Day1 vs Day{N}对比", "example": "30天护肤打卡，Day1 vs Day30对比", "best_for": ["美妆","减肥","打卡"], "duration_range": [30,60]}
+      ]
+    },
+    {
+      "name": "演示类",
+      "type": "demo",
+      "templates": [
+        {"id": "hook_d1", "name": "直接展示", "template": "不说话，直接看效果", "example": "不说话，直接看效果", "best_for": ["美妆","变装","展示"], "duration_range": [15,30]},
+        {"id": "hook_d2", "name": "挑战展示", "template": "挑战{极端条件}{做某事}", "example": "挑战24小时不脱妆", "best_for": ["美妆","挑战","测评"], "duration_range": [30,120]},
+        {"id": "hook_d3", "name": "过程展示", "template": "{N}分钟学会{技能}，从0到1全过程", "example": "5分钟学会画眉毛，从0到1全过程", "best_for": ["教程","美妆","干货"], "duration_range": [30,120]},
+        {"id": "hook_d4", "name": "变身对比", "template": "3 2 1 变身！", "example": "3 2 1 变身！", "best_for": ["变装","美妆","颜值"], "duration_range": [15,30]},
+        {"id": "hook_d5", "name": "对比实验", "template": "{产品A} vs {产品B}，{N}小时后结果出乎意料", "example": "大牌粉底vs平价粉底，8小时后结果出乎意料", "best_for": ["测评","对比","美妆"], "duration_range": [30,120]},
+        {"id": "hook_d6", "name": "速成教学", "template": "零基础{N}分钟学会{技能}", "example": "零基础3分钟学会画眼线", "best_for": ["教程","美妆","干货"], "duration_range": [15,60]},
+        {"id": "hook_d7", "name": "翻车现场", "template": "本来想{目标}，结果{翻车结果}", "example": "本来想画个欧美妆，结果成了熊猫眼", "best_for": ["搞笑","翻车","娱乐"], "duration_range": [15,45]},
+        {"id": "hook_d8", "name": "开箱悬念", "template": "{金额}元的{盒子/包裹}，拆开惊呆了", "example": "999元的盲盒，拆开惊呆了", "best_for": ["开箱","种草","惊喜"], "duration_range": [30,120]},
+        {"id": "hook_d9", "name": "一镜到底", "template": "一镜到底{动作描述}，不剪辑", "example": "一镜到底化全妆，不剪辑", "best_for": ["教程","美妆","真实"], "duration_range": [30,120]},
+        {"id": "hook_d10", "name": "沉浸式", "template": "沉浸式{动作}，建议戴耳机", "example": "沉浸式化妆，建议戴耳机", "best_for": ["沉浸","ASMR","治愈"], "duration_range": [30,180]}
+      ]
+    },
+    {
+      "name": "共鸣类",
+      "type": "resonance",
+      "templates": [
+        {"id": "hook_r1", "name": "群体认同", "template": "{人群}集合！{号召内容}", "example": "黄皮女生集合！这个色号闭眼入", "best_for": ["美妆","种草","群体"], "duration_range": [15,45]},
+        {"id": "hook_r2", "name": "情感共鸣", "template": "{情感描述}的人，一定会懂", "example": "曾经自卑过的人，一定会懂", "best_for": ["情感","共鸣","治愈"], "duration_range": [20,60]},
+        {"id": "hook_r3", "name": "金句开头", "template": "「{金句内容}」", "example": "「真正的美，从来不是完美」", "best_for": ["情感","金句","治愈"], "duration_range": [20,60]},
+        {"id": "hook_r4", "name": "价值观输出", "template": "我认为{观点}，{解释}", "example": "我认为女生化妆从来不是为了取悦别人，而是……", "best_for": ["观点","情感","价值观"], "duration_range": [30,120]},
+        {"id": "hook_r5", "name": "星座/MBTI", "template": "{星座/MBTI}的{特质}，你中了几个？", "example": "处女座化妆的5个特征，你中了几个？", "best_for": ["娱乐","星座","美妆"], "duration_range": [15,45]},
+        {"id": "hook_r6", "name": "地域共鸣", "template": "{地域}的女生注意了！{地域特征}{建议}", "example": "南方女生注意了！潮湿天气这样定妆才不脱", "best_for": ["美妆","地域","干货"], "duration_range": [15,45]},
+        {"id": "hook_r7", "name": "年代共鸣", "template": "{年代}出生的人，还记得{记忆}吗？", "example": "90后还记得小时候偷用妈妈化妆品吗？", "best_for": ["情感","回忆","共鸣"], "duration_range": [20,60]},
+        {"id": "hook_r8", "name": "职场共鸣", "template": "打工人必看！{职场痛点}{解决方案}", "example": "打工人必看！5分钟快速出门妆", "best_for": ["职场","美妆","干货"], "duration_range": [15,45]},
+        {"id": "hook_r9", "name": "妈妈共鸣", "template": "当妈以后才知道{感悟}", "example": "当妈以后才知道，5分钟出门妆有多重要", "best_for": ["母婴","情感","美妆"], "duration_range": [20,60]},
+        {"id": "hook_r10", "name": "自嘲式", "template": "作为一个{自嘲身份}，{自嘲内容}", "example": "作为一个手残党，我终于找到了画眼线的方法", "best_for": ["美妆","自嘲","共鸣"], "duration_range": [15,45]}
+      ]
+    },
+    {
+      "name": "热梗类",
+      "type": "trend",
+      "templates": [
+        {"id": "hook_t1", "name": "BGM卡点", "template": "这个BGM一响，{动作描述}", "example": "这个BGM一响，我就知道要变装了", "best_for": ["变装","卡点","热梗"], "duration_range": [15,30]},
+        {"id": "hook_t2", "name": "挑战话题", "template": "#{挑战话题} 我也来试试", "example": "#冬日妆容挑战 我也来试试", "best_for": ["挑战","热梗","参与"], "duration_range": [15,45]},
+        {"id": "hook_t3", "name": "热点嫁接", "template": "{热点事件}教会我的{N}个道理", "example": "《繁花》教会我的3个化妆道理", "best_for": ["热点","美妆","嫁接"], "duration_range": [20,60]},
+        {"id": "hook_t4", "name": "热梗改编", "template": "「{热梗台词}」{改编内容}", "example": "「臣妾做不到啊」——不画眉毛出门真的做不到", "best_for": ["热梗","搞笑","美妆"], "duration_range": [15,45]},
+        {"id": "hook_t5", "name": "节日借势", "template": "{节日}快到了，{节日相关内容}", "example": "情人节快到了，这个约会妆容男生看了心动", "best_for": ["节日","美妆","约会"], "duration_range": [20,60]},
+        {"id": "hook_t6", "name": "季节借势", "template": "{季节}到了，{季节相关妆容/穿搭}", "example": "秋天到了，这个枫叶妆必须安排", "best_for": ["季节","美妆","趋势"], "duration_range": [15,45]},
+        {"id": "hook_t7", "name": "联名/新品", "template": "{品牌}x{联名}新品开箱！{评价}", "example": "MAC x 王者荣耀联名开箱！美到哭", "best_for": ["开箱","新品","种草"], "duration_range": [30,120]},
+        {"id": "hook_t8", "name": "明星同款", "template": "{明星}同款{产品/妆容}测评", "example": "刘亦菲同款口红色号找到了！", "best_for": ["明星","同款","种草"], "duration_range": [20,60]},
+        {"id": "hook_t9", "name": "平台热点", "template": "最近全网都在{热点行为}，我也来{跟风行为}", "example": "最近全网都在画这个妆，我也来试试", "best_for": ["热点","跟风","美妆"], "duration_range": [15,45]},
+        {"id": "hook_t10", "name": "影视IP", "template": "{影视剧}{角色}仿妆", "example": "《繁花》李李仿妆，气场全开", "best_for": ["仿妆","影视","美妆"], "duration_range": [30,120]}
+      ]
+    },
+    {
+      "name": "权威类",
+      "type": "authority",
+      "templates": [
+        {"id": "hook_a1", "name": "数据支撑", "template": "研究表明{数据结论}", "example": "研究表明：坚持防晒10年，皮肤年轻5岁", "best_for": ["知识","护肤","权威"], "duration_range": [20,60]},
+        {"id": "hook_a2", "name": "专家背书", "template": "{职业}告诉我{专业建议}", "example": "皮肤科医生告诉我：洗脸最常犯的3个错误", "best_for": ["护肤","专业","干货"], "duration_range": [20,60]},
+        {"id": "hook_a3", "name": "配方师视角", "template": "配方师告诉你{产品}值不值得买", "example": "配方师告诉你：这5款精华真正有效", "best_for": ["成分","测评","专业"], "duration_range": [30,120]},
+        {"id": "hook_a4", "name": "内幕消息", "template": "内部消息：{内幕内容}", "example": "内部消息：这个品牌即将涨价，赶紧囤", "best_for": ["种草","促销","消息"], "duration_range": [15,30]},
+        {"id": "hook_a5", "name": "检测报告", "template": "我们检测了{N}款{产品}，只有{M}款通过", "example": "我们检测了20款防晒霜，只有5款真正防晒黑", "best_for": ["测评","检测","权威"], "duration_range": [30,120]},
+        {"id": "hook_a6", "name": "独家首发", "template": "全网首发！{新品/消息}独家揭秘", "example": "全网首发！某大牌春季新品抢先看", "best_for": ["新品","独家","首发"], "duration_range": [20,60]},
+        {"id": "hook_a7", "name": "实验室实测", "template": "实验室实测：{测试内容}{结果}", "example": "实验室实测：10款粉底液持妆排行榜", "best_for": ["测评","实验","数据"], "duration_range": [30,120]},
+        {"id": "hook_a8", "name": "医生建议", "template": "{科室}医生提醒：{健康/护肤建议}", "example": "皮肤科医生提醒：这3种成分别一起用", "best_for": ["护肤","健康","专业"], "duration_range": [20,60]},
+        {"id": "hook_a9", "name": "标准发布", "template": "{N}年经验总结的{领域}标准", "example": "10年化妆师总结的选粉底标准，按这个买不踩雷", "best_for": ["干货","标准","经验"], "duration_range": [20,60]},
+        {"id": "hook_a10", "name": "认证引用", "template": "{认证/奖项}的{产品}，{效果描述}", "example": "获得COSME大赏的这款面霜，补水效果绝了", "best_for": ["种草","认证","权威"], "duration_range": [15,45]}
+      ]
+    }
+  ]
+}

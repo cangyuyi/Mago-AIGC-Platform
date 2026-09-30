@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "description": "CTA策略库，20+种",
+  "strategies": [
+    {"id": "cta_follow_next", "name": "关注期待下期", "template": "关注我，下期教你{下期内容}", "type": "follow", "best_for": ["系列","教程"], "example": "关注我，下期教你怎么画鼻影"},
+    {"id": "cta_save", "name": "收藏防走失", "template": "赶紧收藏起来，不然刷着刷着就找不到了", "type": "save", "best_for": ["干货","教程"], "example": "赶紧收藏起来，不然刷着刷着就找不到了"},
+    {"id": "cta_comment", "name": "评论区互动", "template": "你们觉得呢？评论区告诉我", "type": "comment", "best_for": ["观点","互动"], "example": "你们觉得哪个色号最好看？评论区告诉我"},
+    {"id": "cta_like", "name": "双击点赞", "template": "双击屏幕给我个小心心，{情感诉求}", "type": "like", "best_for": ["通用"], "example": "双击屏幕给我个小心心，你们的支持是我更新的动力"},
+    {"id": "cta_try", "name": "赶紧试试", "template": "赶紧去试试，试完回来告诉我效果", "type": "action", "best_for": ["教程","技巧"], "example": "赶紧去试试，试完回来告诉我效果"},
+    {"id": "cta_share", "name": "转发给朋友", "template": "快转发给你{人群}的朋友看看", "type": "share", "best_for": ["知识","情感"], "example": "快转发给你总买错口红的闺蜜看看"},
+    {"id": "cta_surprise", "name": "结尾惊喜", "template": "看到最后的人有惊喜，{惊喜内容}", "type": "retention", "best_for": ["通用"], "example": "看到最后的人有惊喜，评论区抽3个送同款"},
+    {"id": "cta_dont_cry", "name": "情绪引导", "template": "忍住别哭/别笑，{情绪内容}", "type": "emotion", "best_for": ["情感","搞笑"], "example": "忍住别哭，看到最后我破防了"},
+    {"id": "cta_next_episode", "name": "下期预告", "template": "下期更精彩，{下期内容}，记得来看", "type": "series", "best_for": ["系列","连载"], "example": "下期更精彩，教你们怎么画全妆，记得来看"},
+    {"id": "cta_question_end", "name": "留问题结尾", "template": "你们还想知道什么？评论区告诉我", "type": "comment", "best_for": ["通用"], "example": "你们还想知道什么化妆技巧？评论区告诉我"},
+    {"id": "cta_tag_friend", "name": "艾特朋友", "template": "艾特你{描述}的朋友来看看", "type": "share", "best_for": ["搞笑","情感"], "example": "艾特你那个总画不好眉毛的朋友来看看"},
+    {"id": "cta_vote", "name": "投票选择", "template": "{选项A}扣1，{选项B}扣2，我看哪个多下期做哪个", "type": "interact", "best_for": ["互动","系列"], "example": "想看妆教扣1，想看测评扣2，我看哪个多下期做哪个"},
+    {"id": "cta_challenge", "name": "参与挑战", "template": "你也来试试，{挑战内容}，@{账号}交作业", "type": "ugc", "best_for": ["挑战","互动"], "example": "你也来试试这个眼线画法，@我交作业"},
+    {"id": "cta_purchase", "name": "购买引导", "template": "链接就在{位置}，{促销信息}", "type": "convert", "best_for": ["种草","带货"], "example": "链接就在左下角，现在买还有优惠"},
+    {"id": "cta_profile", "name": "主页更多", "template": "主页有更多{内容类型}，{引导原因}", "type": "profile", "best_for": ["涨粉","个人IP"], "example": "主页有更多化妆教程，从入门到进阶都有"},
+    {"id": "cta_notification", "name": "开提醒", "template": "记得打开小铃铛，{内容}第一时间通知你", "type": "notification", "best_for": ["涨粉"], "example": "记得打开小铃铛，新品首发第一时间通知你"},
+    {"id": "cta_controversy", "name": "争议性结尾", "template": "不服来辩，评论区等你", "type": "comment", "best_for": ["观点","争议"], "example": "不服来辩，觉得我说错的评论区等你"},
+    {"id": "cta_homework", "name": "作业式结尾", "template": "今天的作业：{作业内容}，评论区交作业", "type": "interact", "best_for": ["教程","学习"], "example": "今天的作业：按这个方法画一次眼线，评论区交作业"},
+    {"id": "cta_time_limit", "name": "限时提醒", "template": "{促销/活动}还有{N}天就结束了，{紧迫提醒}", "type": "urgency", "best_for": ["促销","活动"], "example": "这个优惠还有3天就结束了，错过再等一年"},
+    {"id": "cta_wishlist", "name": "许愿池", "template": "还想看什么内容？评论区许愿", "type": "interact", "best_for": ["互动","涨粉"], "example": "还想看什么内容？评论区许愿，点赞高的先安排"}
+  ]
+}

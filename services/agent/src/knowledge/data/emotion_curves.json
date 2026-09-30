@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "description": "情绪曲线模板，15种",
+  "curves": [
+    {"id": "emotion_v_curve", "name": "V型反转", "points": [{"pos":0.0,"val":0.7},{"pos":0.3,"val":0.2},{"pos":0.7,"val":0.5},{"pos":1.0,"val":0.9}], "description": "高→低→高，先压后扬，治愈/励志类首选", "best_for": ["情感","励志","治愈"]},
+    {"id": "emotion_inverted_v", "name": "倒V高潮", "points": [{"pos":0.0,"val":0.4},{"pos":0.3,"val":0.6},{"pos":0.5,"val":1.0},{"pos":1.0,"val":0.5}], "description": "快速推向高潮后回落，变装/展示类", "best_for": ["变装","震撼","展示"]},
+    {"id": "emotion_staircase_up", "name": "阶梯上升", "points": [{"pos":0.0,"val":0.3},{"pos":0.25,"val":0.5},{"pos":0.5,"val":0.65},{"pos":0.75,"val":0.8},{"pos":1.0,"val":1.0}], "description": "层层递进越往后越精彩，盘点/排名类", "best_for": ["盘点","排名","干货"]},
+    {"id": "emotion_rollercoaster", "name": "过山车", "points": [{"pos":0.0,"val":0.5},{"pos":0.2,"val":0.8},{"pos":0.35,"val":0.3},{"pos":0.55,"val":0.9},{"pos":0.7,"val":0.4},{"pos":0.85,"val":1.0},{"pos":1.0,"val":0.6}], "description": "多次反转，剧情/悬疑类", "best_for": ["剧情","悬疑","搞笑"]},
+    {"id": "emotion_constant_high", "name": "持续高能", "points": [{"pos":0.0,"val":0.8},{"pos":0.3,"val":0.9},{"pos":0.6,"val":0.95},{"pos":1.0,"val":1.0}], "description": "全程无尿点，快节奏剪辑/搞笑合集", "best_for": ["搞笑","快剪","合集"]},
+    {"id": "emotion_gradual_warm", "name": "暖心渐进", "points": [{"pos":0.0,"val":0.3},{"pos":0.3,"val":0.45},{"pos":0.6,"val":0.6},{"pos":1.0,"val":0.8}], "description": "慢慢升温治愈感，日常/陪伴/vlog", "best_for": ["日常","vlog","治愈"]},
+    {"id": "emotion_tension_release", "name": "紧张释放", "points": [{"pos":0.0,"val":0.4},{"pos":0.4,"val":0.7},{"pos":0.6,"val":0.9},{"pos":0.7,"val":0.3},{"pos":1.0,"val":0.6}], "description": "积累紧张感后释放，悬念/揭秘类", "best_for": ["悬念","揭秘","测评"]},
+    {"id": "emotion_curious_satisfy", "name": "好奇满足", "points": [{"pos":0.0,"val":0.6},{"pos":0.3,"val":0.8},{"pos":0.5,"val":0.9},{"pos":0.8,"val":0.5},{"pos":1.0,"val":0.7}], "description": "先勾起好奇心再满足，知识/科普类", "best_for": ["知识","科普","揭秘"]},
+    {"id": "emotion_u_shape", "name": "倒V转V", "points": [{"pos":0.0,"val":0.6},{"pos":0.3,"val":0.9},{"pos":0.5,"val":0.3},{"pos":0.8,"val":0.7},{"pos":1.0,"val":0.8}], "description": "高潮→低谷→回升，反转剧情类", "best_for": ["剧情","反转","情感"]},
+    {"id": "emotion_flat_intimate", "name": "平缓亲密", "points": [{"pos":0.0,"val":0.5},{"pos":0.5,"val":0.55},{"pos":1.0,"val":0.6}], "description": "平静如水像朋友聊天，GRWM/日常分享", "best_for": ["日常","分享","陪伴"]},
+    {"id": "emotion_shock_awe", "name": "震撼冲击", "points": [{"pos":0.0,"val":0.3},{"pos":0.15,"val":0.6},{"pos":0.3,"val":0.9},{"pos":0.5,"val":1.0},{"pos":1.0,"val":0.7}], "description": "极快达到震撼峰值，大片/视觉类", "best_for": ["视觉震撼","大片","风景"]},
+    {"id": "emotion_bittersweet", "name": "苦中带甜", "points": [{"pos":0.0,"val":0.4},{"pos":0.4,"val":0.2},{"pos":0.6,"val":0.5},{"pos":1.0,"val":0.65}], "description": "略带忧伤的温暖，情感/成长类", "best_for": ["情感","成长","故事"]},
+    {"id": "emotion_breathing", "name": "呼吸节奏", "points": [{"pos":0.0,"val":0.5},{"pos":0.15,"val":0.8},{"pos":0.3,"val":0.4},{"pos":0.45,"val":0.75},{"pos":0.6,"val":0.45},{"pos":0.75,"val":0.8},{"pos":0.9,"val":0.5},{"pos":1.0,"val":0.7}], "description": "张弛有度快慢交替，快剪/音乐类", "best_for": ["快剪","音乐","卡点"]},
+    {"id": "emotion_suspense_reveal", "name": "悬念揭晓", "points": [{"pos":0.0,"val":0.5},{"pos":0.3,"val":0.7},{"pos":0.6,"val":0.85},{"pos":0.75,"val":0.95},{"pos":0.8,"val":0.4},{"pos":1.0,"val":0.6}], "description": "悬念累积后揭晓谜底，悬疑/测评类", "best_for": ["悬疑","测评","揭秘"]},
+    {"id": "emotion_comedy_beat", "name": "喜剧节拍", "points": [{"pos":0.0,"val":0.4},{"pos":0.2,"val":0.6},{"pos":0.35,"val":0.3},{"pos":0.5,"val":0.7},{"pos":0.65,"val":0.35},{"pos":0.8,"val":0.9},{"pos":1.0,"val":0.5}], "description": "铺垫-抖包袱循环，搞笑/喜剧类", "best_for": ["搞笑","喜剧","段子"]}
+  ]
+}
