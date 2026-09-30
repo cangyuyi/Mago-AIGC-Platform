@@ -459,3 +459,62 @@ jobs:
           tags: mago-web:ci
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+  # Fast, dependency-light guard rail. Every failure this catches has actually
+  # happened in this repo:
+  #   - uv.lock drifting from pyproject.toml, which makes `uv sync --frozen`
+  #     fail in every other job before a single test runs;
+  #   - a malformed workflow/compose file that silently disables the pipeline;
+  #   - a shell script with a syntax error that only shows up when someone runs
+  #     it by hand.
+  repo-hygiene:
+    name: Repo - Lock / YAML / Shell hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - name: Verify uv.lock matches pyproject.toml
+        working-directory: services/agent
+        run: uv lock --check
+      - name: Validate workflow and Compose YAML
+        run: |
+          python -m pip install --quiet "pyyaml>=6"
+          python - <<'PY'
+          import sys
+          import yaml
+          from pathlib import Path
+
+          # GitHub workflow files must parse as strict YAML.
+          targets = list(Path(".github/workflows").glob("*.yml"))
+          # Compose files use merge/reset tags that stock PyYAML does not know;
+          # register them as no-ops so the file still validates structurally.
+          yaml.SafeLoader.add_multi_constructor(
+              "!", lambda loader, suffix, node: None
+          )
+          targets += [Path(p) for p in
+                      ("docker-compose.yml", "docker-compose.prod.yml", "docker-compose.min.yml")]
+
+          failed = False
+          for path in targets:
+              try:
+                  yaml.safe_load(path.read_text(encoding="utf-8"))
+                  print(f"OK   {path}")
+              except Exception as exc:  # noqa: BLE001 - report and continue
+                  print(f"FAIL {path}: {exc}")
+                  failed = True
+          sys.exit(1 if failed else 0)
+          PY
+      - name: Shell syntax check
+        run: |
+          status=0
+          while IFS= read -r script; do
+            if ! bash -n "$script"; then
+              echo "::error file=$script::bash syntax error"
+              status=1
+            fi
+          done < <(find scripts deploy -name '*.sh' -type f)
+          exit $status
