@@ -30,7 +30,7 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
 
       - name: Build & Push API Gateway
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/docker/api-gateway.Dockerfile
@@ -40,7 +40,7 @@ jobs:
             ${{ secrets.REGISTRY_URL }}/mago-api:latest
 
       - name: Build & Push Agent
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/docker/agent.Dockerfile
@@ -50,7 +50,7 @@ jobs:
             ${{ secrets.REGISTRY_URL }}/mago-agent:latest
 
       - name: Build & Push Web
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: deploy/docker/web.Dockerfile
