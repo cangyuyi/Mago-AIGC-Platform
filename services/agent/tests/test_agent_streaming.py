@@ -11,6 +11,7 @@ These tests pin that behaviour down at the route and helper level.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -202,3 +203,32 @@ async def test_astream_graph_normalises_pair_and_bare_payload() -> None:
 
     bare = [item async for item in agent_route._astream_graph(_BareGraph(), {}, {})]
     assert bare == [("updates", {"b": 2})]
+
+@pytest.mark.asyncio
+async def test_heartbeat_emits_keepalive_when_source_is_idle() -> None:
+    """A slow/quiet graph must not let the SSE connection go stale."""
+
+    async def slow_source():
+        await asyncio.sleep(0.15)
+        yield ("updates", {"node": {"current_step": "x"}})
+
+    chunks = [c async for c in agent_route._with_heartbeat(slow_source(), interval=0.02)]
+
+    keepalives = [c for c in chunks if c == ": keep-alive\n\n"]
+    forwarded = [c for c in chunks if c != ": keep-alive\n\n"]
+    assert keepalives, "expected at least one heartbeat while the source was idle"
+    assert forwarded == [("updates", {"node": {"current_step": "x"}})]
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_does_not_delay_active_stream() -> None:
+    """Active events must pass through immediately, with no injected heartbeats."""
+
+    async def fast_source():
+        for i in range(3):
+            yield ("custom", {"type": "chunk", "text": str(i)})
+
+    chunks = [c async for c in agent_route._with_heartbeat(fast_source(), interval=10.0)]
+
+    assert [c[1]["text"] for c in chunks] == ["0", "1", "2"]
+    assert all(c != ": keep-alive\n\n" for c in chunks)

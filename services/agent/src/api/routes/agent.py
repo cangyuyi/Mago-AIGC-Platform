@@ -126,6 +126,49 @@ def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+# SSE heartbeat interval. Long agent nodes (LLM cold start, video analysis) can
+# go quiet for minutes; proxies and browsers drop idle streams. A comment line
+# keeps the connection warm and is ignored by both our web SSE parser and the
+# EventSource spec.
+SSE_HEARTBEAT_SECONDS = 15.0
+
+
+async def _with_heartbeat(
+    source: AsyncIterator[Any],
+    interval: float = SSE_HEARTBEAT_SECONDS,
+) -> AsyncIterator[Any]:
+    """Yield every item from ``source``, injecting ``: keep-alive`` when idle.
+
+    Events from ``source`` always take priority: the heartbeat is only emitted
+    after ``interval`` seconds with no upstream item, so an actively streaming
+    run is never slowed down or reordered.
+    """
+    iterator = source.__aiter__()
+    pending: asyncio.Task[Any] | None = None
+    try:
+        while True:
+            if pending is None:
+                pending = asyncio.ensure_future(iterator.__anext__())
+            done, _ = await asyncio.wait({pending}, timeout=interval)
+            if not done:
+                yield ": keep-alive\n\n"
+                continue
+            try:
+                item = pending.result()
+            except StopAsyncIteration:
+                return
+            finally:
+                pending = None
+            yield item
+    finally:
+        if pending is not None and not pending.done():
+            pending.cancel()
+            try:
+                await pending
+            except (asyncio.CancelledError, StopAsyncIteration):
+                pass
+
+
 async def _validate_project_access(request: Request, project_id: str | None) -> None:
     """Validate that the authenticated user owns the requested project.
 
@@ -398,7 +441,8 @@ async def run_agent(req: ChatRequest, request: Request):
             pending_gate: dict[str, Any] | None = None
             step_count = 0
 
-            async for stream_mode, payload in _astream_graph(graph, graph_input, config):
+            graph_stream = _astream_graph(graph, graph_input, config)
+            async for stream_mode, payload in _with_heartbeat(graph_stream):
                 if stream_mode == "custom":
                     # Token-level chunks forwarded by agents via the stream writer.
                     if isinstance(payload, dict):

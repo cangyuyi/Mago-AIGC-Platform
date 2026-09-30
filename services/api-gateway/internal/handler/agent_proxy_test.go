@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -52,5 +53,47 @@ func TestAgentProxyForwardsJSONAndAuthorization(t *testing.T) {
 	}
 	if got := resp.Body.String(); got != `{"ok":true}` {
 		t.Fatalf("response body = %s", got)
+	}
+}
+
+// sseRecorder records whether the handler flushed mid-stream, which is what
+// keeps token-level SSE real-time instead of collapsing into one delivery.
+type sseRecorder struct {
+	*httptest.ResponseRecorder
+	flushes int
+}
+
+func (r *sseRecorder) Flush() {
+	r.flushes++
+	r.ResponseRecorder.Flush()
+}
+
+func TestAgentProxyFlushesSSEStream(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	proxy := NewAgentProxy("http://agent.internal")
+
+	body := "data: chunk-1\n\ndata: chunk-2\n\ndata: [DONE]\n\n"
+	proxy.client.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+			Body:       io.NopCloser(strings.NewReader(body)),
+			Request:    r,
+		}, nil
+	})
+
+	rec := &sseRecorder{ResponseRecorder: httptest.NewRecorder()}
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/proxy", nil)
+	proxy.ForwardJSON(c, http.MethodPost, "/run", gin.H{"mode": "quick"})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if got := rec.Body.String(); got != body {
+		t.Fatalf("stream body not forwarded intact: %q", got)
+	}
+	if rec.flushes == 0 {
+		t.Fatal("SSE response was never flushed; client would not see token-level streaming")
 	}
 }

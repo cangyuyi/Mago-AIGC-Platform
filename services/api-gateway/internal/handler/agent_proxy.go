@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"io"
@@ -84,5 +85,40 @@ func (p *AgentProxy) forward(c *gin.Context, method, path string, body io.Reader
 		}
 	}
 	c.Status(resp.StatusCode)
-	_, _ = io.Copy(c.Writer, resp.Body)
+	streamResponse(c, resp)
+}
+
+// streamResponse forwards the upstream body to the client.
+//
+// For `text/event-stream` responses it must flush after every chunk, otherwise
+// Go's default copy buffering collapses the Agent's token-level SSE stream into
+// a single delivery at the end and clients lose real-time streaming. For all
+// other content types it falls back to a plain copy.
+func streamResponse(c *gin.Context, resp *http.Response) {
+	if !strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "text/event-stream") {
+		_, _ = io.Copy(c.Writer, resp.Body)
+		return
+	}
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		// Server/transport cannot flush; degrade to a single copy rather than fail.
+		_, _ = io.Copy(c.Writer, resp.Body)
+		return
+	}
+
+	reader := bufio.NewReader(resp.Body)
+	buffer := make([]byte, 4096)
+	for {
+		n, readErr := reader.Read(buffer)
+		if n > 0 {
+			if _, writeErr := c.Writer.Write(buffer[:n]); writeErr != nil {
+				return
+			}
+			flusher.Flush()
+		}
+		if readErr != nil {
+			return
+		}
+	}
 }
