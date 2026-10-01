@@ -1,5 +1,5 @@
 # Deps stage
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 
 RUN corepack enable
@@ -11,7 +11,7 @@ COPY apps/web/package.json ./apps/web/package.json
 RUN corepack pnpm@9.15.0 install --frozen-lockfile
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 ARG API_GATEWAY_URL=http://api-gateway:8080
@@ -29,7 +29,7 @@ COPY . .
 RUN cd apps/web && corepack pnpm@9.15.0 build
 
 # Runtime stage
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
